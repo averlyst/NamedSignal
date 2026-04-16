@@ -2,7 +2,7 @@
 
 ## What's a Signal?
 
-A **Signal** is an implementation of the [Observer Pattern](https://en.wikipedia.org/wiki/Observer_pattern). They're a custom event-dispatching system used to manage communication between different scripts without tight coupling, improving code modularity, performance, and readability compared to the Roblox engine's [RBXScriptSignal](https://create.roblox.com/docs/reference/engine/datatypes/RBXScriptSignal) and [BindableEvents](https://create.roblox.com/docs/reference/engine/classes/BindableEvent).
+A **Signal** is an implementation of the [Observer Pattern](https://en.wikipedia.org/wiki/Observer_pattern). It's a custom event-dispatching system used to manage communication between different scripts without tight coupling, improving code modularity, performance, and readability compared to the Roblox engine's [RBXScriptSignal](https://create.roblox.com/docs/reference/engine/datatypes/RBXScriptSignal) and [BindableEvents](https://create.roblox.com/docs/reference/engine/classes/BindableEvent).
 
 ## Why use this?
 
