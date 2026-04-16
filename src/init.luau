@@ -1,29 +1,13 @@
 --[[
 	-- NamedSignal --
 	
-	v1.2.1
+	v2.0.0-rc.1
 
-	A zero compromises Luau signal implementation, designed for Synchronous Functional Reactive Programming (FRP) with
-	Atomic Propagation, that also lets you name and define variadic parameters!
+	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
+	Most notably, you can use function types to get named parameters!
 
-	NamedSignal is GohanDucis's Class 3 Signal certified:
-		https://devforum.roblox.com/t/signal-certifications-classes-guide/4263792
-
-	Comprehensive documentation is available at:
+	Comprehensive documentation and additional info is available at:
 		https://Nowoshire.github.io/NamedSignal
-
-	NOTICE:
-		This library's types are not compatible with the old solver!
-
-	COMPATIBILITY:
-		If you require this to be backwards compatible with other signal libraries that use generic type pack parameters
-		then you can define a new type that proxies the parameters in a functiontype:
-		```luau
-		export type GenericSignal<Params...> = Signal<(Params...) -> ()>
-		```
-
-		Full compatibility details are available at:
-			https://Nowoshire.github.io/NamedSignal/compatibility
 
 	This software is licensed under the MIT License:
 		https://github.com/Nowoshire/NamedSignal/blob/main/LICENSE
@@ -54,404 +38,494 @@
 --!strict
 --!optimize 2
 
--- Determines whether callbacks are deferred or called immediately.
--- NOTE: Deferred invocation causes a massive performance degradation; this is true for all signal libraries.
-local DEFERRED_MODE = false
+-- Constants --
+-- Controls whether event handlers are fired immediately or deferred.
+-- "Immediate" is the recommended default for performance reasons.
+const SIGNAL_BEHAVIOR: "Immediate" | "Deferred"
+	= "Immediate"
+
+-- Whether to use the Roblox task library to handle invocations when available.
+-- Only applicable when using Immediate signal behavior, always uses task.defer on Deferred mode when available.
+-- Using the task library results in a roughly 2-4x worse firing performance, but provides error information in output.
+const USE_TASK_LIBRARY = true
+
+-- Function used for resuming threads used for invocation, switched based on signal behavior and task library availability.
+const resumeInvokeThread = task and (
+	SIGNAL_BEHAVIOR == "Deferred" and task.defer or USE_TASK_LIBRARY and task.spawn
+) or coroutine.resume
+
+-- Imports --
+const Types = require("@self/Types")
 
 -- Thread Recycling --
-local threadPool = {} :: {thread}
+--[[
+	Spawns a thread faster than the task library, only returns the created thread.
+]]
+const function spawnThread <A..., R...>(func: (A...) -> (R...), ...: A...): (thread)
+	const thread = coroutine.create(func)
+	coroutine.resume(thread, ...)
+	return thread
+end
+
+-- "Fast" thread cache, slightly improves the performance of non-yielding dispatch.
+local tL1: thread?
+
+-- "Slow" thread cache
+const threadPool = {} :: {thread}
 
 --[[
-	Calls the given callback with the given arguments, then adds the given thread to the threadPool after it finishes execution.
+	Calls the given callback with the given arguments, then adds the thread into the cache for reuse.
 ]]
-local function callAndAddThreadToPool(thread: thread, callback: (...any) -> (), ...: any)
+const function callOnAndCacheThread(thread: thread, callback: (...any) -> (), ...: any): ()
 	callback(...)
-	-- Callback finished running, this thread is free again, add it back to the pool
-	table.insert(threadPool, thread)
+
+	-- Callback finished running, this thread is free again, add it back to the cache
+	if tL1 then
+		table.insert(threadPool, thread)
+	else
+		tL1 = thread
+	end
 end
 
 --[[
 	Indefinitely looping function body of event handler coroutines.
 	Gets resumed with functions to run followed by arguments to run them with.
 ]]
-local function eventHandlerRoutine()
+const function eventHandlerRoutine(): ()
 	while true do
-		callAndAddThreadToPool(coroutine.yield())
+		callOnAndCacheThread(coroutine.yield())
 	end
 end
 
-local resumeThread = if DEFERRED_MODE then task.defer else coroutine.resume
-
 --[[
-	Forces all properties in the given tabletype to be writable non-recursively.
+	Returns an available thread.
 ]]
-type function writable(ty: type)
-	for keyType, rwType in ty:properties() do
-		if not rwType.write then
-			ty:setwriteproperty(keyType, rwType.read)
-		end
-	end
-
-	return ty
-end
-
--- Re-entrancy Helpers --
-
---[[
-	Adds and yields the current running thread to the back of the last level reentrants list, or creating a new level if one does not exist.
-]]
-local function enqueueReentrant(reentrantsList: {{thread}})
-	local levels = #reentrantsList
-	if levels == 0 then
-		reentrantsList[1] = {coroutine.running()}
+const function getAvailableThread(): (thread)
+	local thread: thread
+	if tL1 then -- Check fast cache
+		thread = tL1
+		tL1 = nil
 	else
-		table.insert(reentrantsList[levels], coroutine.running())
+		-- Check slow cache
+		const numThreads = #threadPool
+		if numThreads == 0 then
+			-- No thread is available in pool, return a new one.
+			return spawnThread(eventHandlerRoutine)
+		end
+
+		thread = threadPool[numThreads]
+		threadPool[numThreads] = nil -- Remove from free threads
 	end
 
-	coroutine.yield() -- wait to be resumed
+	-- Fix an edge case where if the cached handler thread is not suspended, the first listener will not run on the next invocation.
+	if coroutine.status(thread) ~= "suspended" then
+		return spawnThread(eventHandlerRoutine)
+	end
+
+	return thread
+end
+
+-- Deferred Mutation Helpers --
+
+--[[
+	Queues a mutation at the last mutation level, or creates a new one if one does not exist.
+]]
+const function enqueueMutation(mutationList: {{Types.SignalMutation}}, mutation: Types.SignalMutation): ()
+	const levels = #mutationList
+	const lastMutations = mutationList[levels]
+
+	if lastMutations then
+		table.insert(lastMutations, mutation) -- add mutation to existing last level
+	else
+		mutationList[1] = {mutation}
+	end
 end
 
 --[[
-	Adds and yields the current running thread to a new reentrant level in the given reentrants list.
+	Queues a mutation and starts a new mutation level.
 ]]
-local function enqueueReentrantLevel(reentrantsList: {{thread}})
-	table.insert(reentrantsList, {coroutine.running()})
-	coroutine.yield() -- wait to be resumed
+const function enqueueMutationLevel(mutationList: {{Types.SignalMutation}}, mutation: Types.SignalMutation): ()
+	const levels = #mutationList
+	const lastMutations = mutationList[levels]
+
+	if lastMutations then
+		table.insert(lastMutations, mutation) -- add mutation to existing last level
+		mutationList[levels + 1] = {}
+	else
+		mutationList[1] = {mutation}
+		mutationList[2] = {} -- new level
+	end
 end
 
 -- Connection Class --
-local Connection = {}
+const Connection = {}
 Connection.__index = Connection
 
--- Avoid setting metatables in this type, typesolver doesn't handle them too well.
-export type Connection<Signature = () -> ()> = {
-	read Signal: Signal<Signature>,
-	read Connected: boolean,
-	read Callback: Signature,
-
-	read Disconnect: typeof(
-		--[[
-			Disconnects the connection from the signal.
-
-			<code><strong>skipReentrancy</strong>: boolean?</code>
-			Whether to skip re-entrancy and disconnect the connection immediately, disregarding snapshot rules.
-		]]
-		function(self: Connection<Signature>, skipReentrancy: boolean?): () end
-	),
-	read Destroy: typeof(
-		--[[
-			Alias for <code>Connection:Disconnect()</code>.
-			Disconnects the connection from the signal.
-
-			<code><strong>skipReentrancy</strong>: boolean?</code>
-			Whether to skip re-entrancy and disconnect the connection immediately, disregarding snapshot rules.
-		]]
-		function(self: Connection<Signature>, skipReentrancy: boolean?): () end
-	),
-}
-
--- Internal type used for accessing members that shouldn't be used by end user
-type InternalConnection = {
-	_prev: InternalConnection?,
-	_next: InternalConnection?,
-	Signal: InternalSignal,
-} & writable<Connection>
+export type Connection<Signature = () -> ()> = Types.Connection<Signature>
+type InternalConnection = Types.InternalConnection
 
 --[[
-	Disconnects the connection from the signal.
-
-	<code><strong>skipReentrancy</strong>: boolean?</code>
-	Whether to skip re-entrancy and disconnect the connection immediately, disregarding snapshot rules.
+	Links the connection to the end of the signal.
 ]]
-function Connection.Disconnect(self: InternalConnection, skipReentrancy: boolean?): ()
-	-- Check that the connection is actually connected
-	if not self.Connected then return end
+const function linkConnection(connection: InternalConnection, signal: InternalSignal): ()
+	if connection.Connected then return end
+	connection.Connected = true
 
-	local signal = self.Signal
-	if not skipReentrancy and signal._firing then
-		enqueueReentrant(signal._reentrants)
+	const tail = signal._tail
+
+	-- Link the connection to the tail connection if it exists
+	if tail then
+		tail._next = connection
+		connection._prev = tail
+	else -- Otherwise, this is the first connection, set signal head to this.
+		signal._head = connection
 	end
 
-	self.Connected = false
-	local prv, nxt = self._prev, self._next
+	signal._tail = connection
+end
 
-	-- Replace the `_next` property of previous connection with the next connection if one exists
-	-- Otherwise, this was the first connection, set the head (first connection) to next connection.
+--[[
+	Unlinks the connection from the signal.
+]]
+const function unlinkConnection(connection: InternalConnection, signal: InternalSignal): ()
+	if not connection.Connected then return end
+	connection.Connected = false
+
+	-- Bridge gaps, set prev next to this one's next and vice versa.
+	const prv, nxt = connection._prev, connection._next
+
 	if prv then
 		prv._next = nxt
-	else
+	else -- This was the first link in the list, set to next
 		signal._head = nxt
 	end
 
-	-- Replace the `_prev` property of next connection with previous connection if one exists
-	-- Otherwise, this was the last connection, set the tail (last connection) to previous connection.
 	if nxt then
 		nxt._prev = prv
-	else
+	else -- This was the last link in the list, set to previous
 		signal._tail = prv
 	end
 end
 
--- Alias Destroy to `Connection.Disconnect` for cleanup utilities.
-Connection.Destroy = Connection.Disconnect
+function Connection.Disconnect(self: InternalConnection): ()
+	const signal = self.Signal
+	if signal._firing then
+		enqueueMutation(signal._mutations, {
+			f = unlinkConnection :: any,
+			c = self
+		})
+		return
+	end
+
+	unlinkConnection(self, signal)
+end
+
+function Connection.DisconnectNow(self: InternalConnection): ()
+	unlinkConnection(self, self.Signal)
+end
+
+function Connection.Reconnect(self: InternalConnection): ()
+	const signal = self.Signal
+	if signal._firing then
+		enqueueMutation(signal._mutations, {
+			f = linkConnection :: any,
+			c = self,
+		})
+		return
+	end
+
+	linkConnection(self, signal)
+end
+
+function Connection.ReconnectNow(self: InternalConnection): ()
+	linkConnection(self, self.Signal)
+end
+
+-- No "-Now" variation is provided for `Connection:Destroy()`, as that would cause issues with deferred mutations.
+
+function Connection.Destroy(self: InternalConnection): ()
+	unlinkConnection(self, self.Signal)
+	table.clear(self)
+	setmetatable(self, nil)
+end
 
 -- Signal Class --
-local Signal = {}
+const Signal = {}
 Signal.__index = Signal
 
---[[
-	Generates the function signature for `Signal:Fire()`.
-]]
-type function SignalFireSignature(signal: type, signature: type, fallback: type): (type)
-	local signatureTag = signature.tag
-	if signatureTag == "unknown" then
-		return fallback
+-- NOTE: UDTFs currently can't serialize recursive types, use the GenericSignal type instead if you run into such issues.
+export type Signal<Signature = (...unknown) -> ()> = Types.Signal<Signature>
+
+-- A generics-only alternative as a workaround for types that UDTFs can't serialize, or for compatibility with other signal implementations.
+export type GenericSignal<Params...> = Types.GenericSignal<Params...>
+
+type InternalSignal = Types.InternalSignal
+
+const function cancelAllMutations(self: InternalSignal): ()
+	if not self._firing then return end
+
+	const mutations = self._mutations
+
+	-- Make sure to clear the first level if one exists, so any active process gets cancelled.
+	const firstLevel = mutations[1]
+	if firstLevel then
+		table.clear(firstLevel)
 	end
 
-	if signatureTag ~= "function" then
-		print(`Signal<Signature> expects a 'function' type for \`Signature\`, got '{signatureTag}' type instead.`)
-		return fallback
+	table.clear(mutations)
+end
+
+Signal.CancelAllMutations = cancelAllMutations
+
+const function baseDisconnectAll(signal: InternalSignal): ()
+	local connection = signal._head
+	while connection do
+		connection.Connected = false
+		connection = connection._next -- Iterate
+	end
+end
+
+const function baseDisconnectAllRemoveNext(signal: InternalSignal): ()
+	local connection = signal._head
+	while connection do
+		connection.Connected = false
+		connection._next, connection = nil, connection._next -- Iterate and also remove _next to stop fire iteration
+	end
+end
+
+const function disconnectAll(signal: InternalSignal): ()
+	baseDisconnectAll(signal)
+	signal._head = nil
+	signal._tail = nil
+end
+
+function Signal.DisconnectAll(self: InternalSignal): ()
+	if self._firing then
+		enqueueMutation(self._mutations, {
+			f = disconnectAll :: any
+		})
+		return
 	end
 
-	local params = signature:parameters()
-	local head = params.head
-	if not head then
-		head = {} :: {type}
-		params.head = head
+	disconnectAll(self)
+end
+
+function Signal.DisconnectAllNow(self: InternalSignal): ()
+	baseDisconnectAllRemoveNext(self)
+	self._head = nil
+	self._tail = nil	
+end
+
+const function destroy(signal: InternalSignal): ()
+	cancelAllMutations(signal)
+	baseDisconnectAll(signal)
+	
+	table.clear(signal)
+	setmetatable(signal, nil)
+end
+
+function Signal.Destroy(self: InternalSignal): ()
+	if self._firing then
+		enqueueMutation(self._mutations, {
+			f = destroy :: any
+		})
+		return
 	end
 
-	head = head :: {type}
-	table.insert(head, 1, signal)
-	return types.newfunction(params)
+	destroy(self)
+end
+
+function Signal.DestroyNow(self: InternalSignal): ()
+	cancelAllMutations(self)
+	baseDisconnectAllRemoveNext(self)
+
+	table.clear(self)
+	setmetatable(self, nil)
 end
 
 --[[
-	Generates the function signature for `Signal:Wait()`.
+	Returns a new unlinked Connection, used during deferred connections where it's not immediately connected.
 ]]
-type function SignalWaitSignature(signal: type, signature: type, fallback: type): (type)
-	local signatureTag = signature.tag
-	if signatureTag == "unknown" then
-		return fallback
-	end
-
-	if signatureTag ~= "function" then
-		print(`Signal<Signature> expects a 'function' type for \`Signature\`, got '{signatureTag}' type instead.`)
-		return fallback
-	end
-
-	return types.newfunction(
-		{head = {signal}}, -- parameters
-		signature:parameters() -- returns
-	)
+const function newUnlinkedConnection(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+	return setmetatable({
+		Connected = false,
+		Callback = func,
+		Signal = signal,
+	}, Connection) :: any
 end
 
--- Avoid setting metatables in this type, typesolver doesn't handle them too well.
-export type Signal<Signature = () -> ()> = {
-	read Connect: typeof(
-		--[[
-			Connects the given function to the signal and returns a <code>Connection</code> that represents it.
-		]]
-		function(self: Signal<Signature>, func: Signature): (Connection<Signature>) return nil :: any end
-	),
-
-	read Once: typeof(
-		--[[
-			Connects the given function to the signal for a single invocation and returns a <code>Connection</code> that represents it.
-		]]
-		function(self: Signal<Signature>, func: Signature): (Connection<Signature>) return nil :: any end
-	),
-
-	read DisconnectAll: typeof(
-		--[[
-			Disconnects all connections from the signal.
-		]]
-		function(self: Signal<Signature>): () end
-	),
-
-	read Destroy: typeof(
-		--[[
-			Disconnects all connections from the signal, and removes its metatable.
-		]]
-		function(self: Signal<Signature>): () end
-	),
-
-	-- UDTF handled signatures --
-	-- NOTE: Can't have signal as parameters in these signatures, not serializable by type functions.
-	-- Unfortunately we do lose the names for Signal:Fire(), there isn't much that can be done about it.
-	read Fire: SignalFireSignature<any, Signature, (any) -> ()>,
-	read Wait: SignalWaitSignature<any, Signature, (any) -> ()>,
-}
-
--- Internal type used for accessing members that shouldn't be used by end user
-type InternalSignal = {
-	_head: InternalConnection?,
-	_tail: InternalConnection?,
-	_firing: true?,
-	_reentrants: {{thread}}, -- {[re-entrancy level]: {thread}}
-} & Signal
-
--- NOTE: The proper function signatures are set by the `Signal` type, we use internal types here to simplify the process of writing
--- these without hacky typecasting.
-
 --[[
-	Connects the given function to the signal and returns a <code>Connection</code> that represents it.
+	Returns a new linked Connection.
 ]]
-local function newConnection(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
-	if signal._firing then
-		enqueueReentrant(signal._reentrants)
-	end
-
-	local tail = signal._tail
-	local connection = setmetatable({
+const function newLinkedConnection(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+	const tail = signal._tail
+	const connection: InternalConnection = setmetatable({
 		Connected = true,
 		Callback = func,
 		Signal = signal,
 		_prev = tail,
-	}, Connection) :: InternalConnection
+	}, Connection) :: any
 
-	-- If tail connection exists: update it to point `_next` to this connection.
-	-- Otherwise, this connection is the first connection, set signal head to it.
 	if tail then
 		tail._next = connection
 	else
 		signal._head = connection
 	end
 
-	-- Update tail connection
 	signal._tail = connection
-
 	return connection
 end
 
-Signal.Connect = newConnection
-
 --[[
-	Connects the given function to the signal for a single invocation and returns a <code>Connection</code> that represents it.
+	Connects the given function to the <code>Signal</code> and returns a <code>Connection</code> that represents it.
+	Depending on the signal's fire state, returns a queued unlinked connection, or an immediately linked connection.
 ]]
-function Signal.Once(self: InternalSignal, func: (...any) -> ()): (InternalConnection)
-	local connection: InternalConnection; connection = newConnection(self, function(...)
-		connection:Disconnect(true)
+const function signalConnect(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+	if signal._firing then
+		const unlinked = newUnlinkedConnection(signal, func)
+		enqueueMutation(signal._mutations, {
+			f = linkConnection :: any,
+			c = unlinked
+		})
+
+		return unlinked
+	end
+
+	return newLinkedConnection(signal, func)
+end
+
+Signal.Connect = signalConnect
+Signal.ConnectNow = newLinkedConnection
+
+const function signalOnce(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+	local connection: InternalConnection
+	connection = signalConnect(signal, function(...: any)
+		unlinkConnection(connection :: InternalConnection, signal)
 		func(...)
 	end)
 
 	return connection
 end
 
--- NOTE: This docstring is never visible to end user, as UDTFs do not support attaching docstrings to functiontypes.
---[[
-	Yields the current thread until the signal fires and returns the arguments provided by the signal.
-]]
-function Signal.Wait(self: InternalSignal): (...any) -- NOTE: UDTF handles the proper return type
-	local thisThread = coroutine.running()
-	local connection: InternalConnection; connection = newConnection(self, function(...)
-		connection:Disconnect(true)
-		coroutine.resume(thisThread, ...)
+const function signalOnceNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+	local connection: InternalConnection
+	connection = newLinkedConnection(signal, function(...)
+		unlinkConnection(connection :: InternalConnection, signal)
+		func(...)
+	end)
+
+	return connection
+end
+
+Signal.Once = signalOnce
+Signal.OnceNow = signalOnceNow
+
+function Signal.Wait(self: InternalSignal): (...any)
+	const thisThread = coroutine.running()
+	signalOnce(self, function(...: any)
+		resumeInvokeThread(thisThread, ...)
 	end)
 
 	return coroutine.yield()
 end
 
--- NOTE: This docstring is never visible to end user, as UDTFs do not support attaching docstrings to functiontypes.
+function Signal.WaitNow(self: InternalSignal): (...any)
+	const thisThread = coroutine.running()
+	signalOnceNow(self, function(...: any)
+		resumeInvokeThread(thisThread, ...)
+	end)
+
+	return coroutine.yield()
+end
+
 --[[
-	Calls all connected functions and resumes all waiting threads with the given arguments.
+	Calls all currently connected functions and processes first-level mutations.
 ]]
-function Signal.Fire(self: InternalSignal, ...: any): () -- NOTE: UDTF handles the proper parameters
-	-- Defer re-entrant fires to respect deferred mutations
-	local reentrants = self._reentrants
-	if self._firing then
-		-- Create new re-entrancy level and wait to be resumed
-		enqueueReentrantLevel(reentrants)
-	else
-		self._firing = true
-
-	end
-	
-	local connection = self._head
+const function invokeListenersAndProcessMutations(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any)
+	local connection = signal._head
 	while connection do
-		-- Every connection in the list should be connected, so we'll skip checking if it's connected here.
-		local numThreads = #threadPool
-		local thread: thread
-
-		if numThreads == 0 then
-			-- No thread available in pool, create and init a new runner thread.
-			thread = task.spawn(eventHandlerRoutine)
-		else
-			-- A runner thread is available, yay!
-			thread = threadPool[numThreads]
-			threadPool[numThreads] = nil -- remove from free threads
-		end
-
-		resumeThread(thread, thread, connection.Callback, ...) -- (thread, callback, ...) -> ()
-
-		-- Update for next iteration
+		const thread = getAvailableThread()
+		resumeInvokeThread(thread, thread, connection.Callback, ...)
 		connection = connection._next
 	end
 
-	-- Resume first level reentrants
-	local reentrant = reentrants[1]
-	if reentrant then
-		-- We could use linked lists for O(1)
-		-- but it wouldn't meaningfully improve performance outside of extreme cases.
-		table.remove(reentrants, 1)
+	-- Apply first-level mutations.
+	-- While table.remove would return the firstMutations array if it exists, the majority of use cases will
+	-- see no mutations, so it would generally be more performant to index first, then call `table.remove`.
+	const firstMutations = mutationList[1]
+	if not firstMutations then return end
 
-		-- Check if all fires have completed and reset _firing flag.
-		-- Reset this flag before resuming threads
-		if not reentrants[1] then
-			self._firing = nil
+	table.remove(mutationList, 1)
+
+	for _, mutation in firstMutations do
+		const func = mutation.f
+		if not func then
+			-- The function is only undefined for re-entrant firing.
+			-- As re-entrant firing creates a new mutation level, no more mutations will be on this level.
+			-- Resume parameter storage thread to retrieve the variadics, and select with index 2, as coroutine.resume
+			-- returns a boolean as the first argument, which we don't want.
+			invokeListenersAndProcessMutations(signal, mutationList, select(2, coroutine.resume(mutation.p :: thread)))
+			return
 		end
 
-		for _, thread in reentrant do
-			coroutine.resume(thread)
+		const conn = mutation.c
+		if conn then
+			func(conn, signal)
+		else
+			func(signal)
 		end
-	else
+	end
+end
+
+--[[
+	Yields the current thread, and when resumed, returns the given parameters.
+]]
+const function yieldVariadicStack(...: any)
+	coroutine.yield()
+	return ...
+end
+
+--[[
+	Stores the given parameters in a thread that immediately yields, and that when resumed, returns the parameters.
+]]
+const function storeVariadics<V...>(...: V...): (thread)
+	return spawnThread(yieldVariadicStack, ...)
+end
+
+function Signal.Fire(self: InternalSignal, ...: any)
+	const mutations = self._mutations
+
+	if self._firing then
+		enqueueMutationLevel(mutations, {
+			p = storeVariadics(...)
+		})
+		return
+	end
+
+	self._firing = true
+	invokeListenersAndProcessMutations(self, mutations, ...)
+	self._firing = nil
+end
+
+function Signal.FireNow(self: InternalSignal, ...: any)
+	const mutations = self._mutations
+
+	self._firing = true
+	invokeListenersAndProcessMutations(self, mutations, ...)
+	if not mutations[1] then
 		self._firing = nil
 	end
 end
 
--- Currently, we do not allow bypassing re-entrancy for DisconnectAll/Destroy.
--- Doing so would require cancelling threads and never resuming them, creating a major risk of hidden
--- and hard to diagnose bugs, which we'd like to avoid.
-
-local function baseDisconnectAll(signal: InternalSignal)
-	if signal._firing then
-		enqueueReentrant(signal._reentrants)
-	end
-
-	local connection = signal._head
-	while connection do
-		-- We don't need to remove _next and _prev
-		connection.Connected = false
-		connection = connection._next -- Update for next iteration
-	end
-end
+-- Interface --
+const NamedSignal = {}
 
 --[[
-	Disconnects all connections from the signal.
-]]
-function Signal.DisconnectAll(self: InternalSignal): ()
-	baseDisconnectAll(self)
-	self._head = nil
-	self._tail = nil
-end
-
---[[
-	Disconnects all connections from the signal, and removes its metatable.
-]]
-function Signal.Destroy(self: InternalSignal): ()
-	baseDisconnectAll(self)
-	table.clear(self)
-	setmetatable(self, nil)
-end
-
--- Module --
-local NamedSignal = {}
-
---[[
-	Returns a new Signal.
+	Returns a new <code>Signal</code>.
 ]]
 function NamedSignal.new<Signature>(): (Signal<Signature>)
 	return setmetatable({
-		_reentrants = {},
+		_mutations = {},
 	}, Signal) :: any
 end
 

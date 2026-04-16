@@ -1,5 +1,5 @@
 {
-	"name": "Signal",
+	"name": "namedsignal",
 	"tree": {
 		"$path": "src"
 	}

@@ -1,12 +1,17 @@
 # Project model file
-/Signal.rbxm
+Signal.rbxm
 
 # Roblox Studio lock files
-/*.rbxlx.lock
-/*.rbxl.lock
+*.rbxlx.lock
+*.rbxl.lock
 
 # Affinity files
 *.af~lock~
 *.af
 
+# Vitepress files
+docs/.vitepress/dist
+docs/.vitepress/cache
+
 sourcemap.json
+package-lock.json

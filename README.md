@@ -1,50 +1,43 @@
-<div align="center">
-<img src="docs/logo.png" alt="NamedSignal Logo" style="width:50%; height:auto;">
+<!-- markdownlint-disable-file MD033 -->
 
----
-### A Zero Compromises Luau Signal Implementation
-A signal designed for Synchronous Functional Reactive Programming (FRP) with Atomic Propagation, that also lets you name and define variadic parameters (`a01: type` begone!)
-<br><br>
+<div align="center"><img src="docs/logo.png" alt="NamedSignal Logo" style="width:50%; height:auto;"> <!-- markdownlint-disable-line MD041 -->
+
+## A Luau signal implementation with a nice balance of ergonomics, performance, and features. <!-- markdownlint-disable-line MD026 -->
+
+<br>
 
 [![Download Badge](https://img.shields.io/badge/Download-005CC0?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Nowoshire/NamedSignal/releases/latest)
 &ensp;
 [![Documentation Badge](https://img.shields.io/badge/Documentation-5C00C0?style=for-the-badge&logo=readme&logoColor=white)](https://Nowoshire.github.io/NamedSignal/)
-<br>
-
+<br><br>
 [![DevForum Badge](https://img.shields.io/badge/DevForum-lightblue?style=social&logo=robloxstudio)](https://devforum.roblox.com/t/4341837)
 &nbsp;
 [![GitHub Badge](https://img.shields.io/badge/GitHub-gray?style=social&logo=github)](https://github.com/Nowoshire/NamedSignal)
 
 ```toml
-Signal = "nowoshire/namedsignal@^1.0.0"
+Signal = "nowoshire/namedsignal@^2.0.0"
 ```
-
-</div>
 
 ---
 
-<br>
+### Named Parameters — `a01: type` begone! <!-- markdownlint-disable-line MD026 -->
 
-> [!IMPORTANT]
-> ### Requires New Luau Type Solver<br>
-> NamedSignal is built for the New Luau Type Solver, it is not compatible with the old solver. See [Compatibility](https://Nowoshire.github.io/NamedSignal/compatibility) for more details.
+NamedSignal uses functiontypes, so you can get named parameters when autofilling functions!
 
-<div align="center">
+### Strict Typing
 
-# Example Usage
-NamedSignal aims to be familiar and simple to use to those experienced with typechecking, below is an example snippet that should get you started!
+Fully strictly typed for the New Luau Type Solver.
+
+### Deferred Mutations
+
+Get predictable behavior and avoid edge case bugs.
+
+### High Performance
+
+More efficient than engine APIs by working in pure Luau.
+
+---
+
+Learn more at [Documentation | NamedSignal](https://Nowoshire.github.io/NamedSignal/).
+
 </div>
-
-```lua
-local Signal = require(path.to.namedsignal)
-
-local exampleEvent = Signal.new() :: Signal.Signal<(say: string) -> ()>
-
--- Anonymous function auto-fill fully autocompletes parameter names!
-exampleEvent:Connect(function(say: string)
-	print(say)
-end)
-
--- And everything else is fully typed too!
-exampleEvent:Fire("Hello, world!")
-```
