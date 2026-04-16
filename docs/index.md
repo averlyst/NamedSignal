@@ -6,7 +6,7 @@ hero:
   name: "NamedSignal"
   text: "Documentation"
   tagline: "A Luau signal implementation with a nice balance of ergonomics, performance, and features."
-  image: "/logo.png"
+  image: "https://github.com/Nowoshire/NamedSignal/blob/main/docs/logo.png?raw=true"
   actions:
     - theme: brand
       text: Get Started
