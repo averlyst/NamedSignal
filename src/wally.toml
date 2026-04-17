@@ -10,6 +10,6 @@ homepage = "https://nowoshire.github.io/NamedSignal/"
 repository = "https://github.com/Nowoshire/NamedSignal"
 
 realm = "shared"
-include = ["*", "wally.toml"]
+include = ["*"]
 
 [dependencies]
