@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.0.1
+	v2.0.4
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
