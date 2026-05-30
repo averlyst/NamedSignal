@@ -1,6 +1,6 @@
 # Performance
 
-This page documents the performance optimizations employed by NamedSignal, as well as benchmarks and comparisons to other Signal libraries.
+This page documents the performance optimizations employed by NamedSignal.
 
 ## Optimizations
 
@@ -20,14 +20,16 @@ Inspired by CPU cache architecture, NamedSignal implements **2 layers of thread 
 
 Accessing an upvalue is faster than indexing an array, so performance is slightly improved for non-yielding invocation.
 
-### `coroutine.resume` Over `task.spawn`
+### Reduced Resumption Overhead in Production
 
-**[`task.spawn`](https://create.roblox.com/docs/reference/engine/libraries/task#spawn) is much slower (~3-4x) than [`coroutine.resume`](https://create.roblox.com/docs/reference/engine/libraries/coroutine#resume)**.
+By default, NamedSignal uses [`coroutine.resume`](https://create.roblox.com/docs/reference/engine/libraries/coroutine#resume) in production to greatly reduce overhead when resuming threads with an efficient custom error and traceback logger, and [`task.spawn`](https://create.roblox.com/docs/reference/engine/libraries/task#spawn) in Studio for better debugging.
 
-By default **NamedSignal completely avoids use of the task library**. However it is still used available and configured to do so:
+This behavior changes with different configurations:
 
-- `SIGNAL_BEHAVIOR` is set to `"Deferred"` ([`task.defer`](https://create.roblox.com/docs/reference/engine/libraries/task#defer) will be used instead).
-- `ERROR_INFO_MODE` is set to `"Full"`.
+- When `SIGNAL_BEHAVIOR` is set to `"Deferred"` ([`task.defer`](https://create.roblox.com/docs/reference/engine/libraries/task#defer) will always be used instead). `ERROR_INFO_MODE` is ignored in this mode.
+- When `ERROR_INFO_MODE` is set to `"Full"`, `task.spawn` is always used.
+- When `ERROR_INFO_MODE` is set to `"Warn"`, `coroutine.resume` with the custom logger is always used.
+- When `ERROR_INFO_MODE` is set to `"None"`, `coroutine.resume` is always used, without any form of error logging.
 
 ### Avoiding The OOP API Internally
 
@@ -35,41 +37,23 @@ When a function that is part of the OOP interface is depended on internally, it'
 
 ## Benchmarks
 
-### Test Details
+Benchmarks are a work in progress!
 
-> [!NOTE]
-> This benchmark only tests the standard API of most Signals, therefore many of NamedSignal's methods are not included.
-
-**A proper benchmark is in the works!**
-
-For now testing uses [Gohan's Certification](gohans-certification)'s Speed Certification.
-
-### Machine Details
-
-Specifications of the hardware and software the following benchmark results are from.
-
-- **CPU**: AMD Ryzen 7 5700X3D 8-Core Processor (8C/16T)
-- **RAM**: 32 GB 3200MT/s DDR4 (4x8G)
-- **OS**: Windows 11 Pro 25H2
-- **Roblox Studio**: Version 0.716.0.7160873
-
-### Results
-
-#### NamedSignal
+For now testing uses [Gohan's Certification](./gohans-certification)'s Speed Certification:
 
 ```txt
 ⚪ | Speed Certification     |  -  Server - Signal_Certifications:2020
 --------------------------------------------------------------------------------------  -  Server - Signal_Certifications:1965
-☑ | Create         | -0.5μs  | Baseline: 0.5μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Connect        | -0.6μs  | Baseline: 0.7μs  ▶ {...} | Results: 0.2μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Once           | -0.4μs  | Baseline: 0.6μs  ▶ {...} | Results: 0.2μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_None      | +0.0μs  | Baseline: 0.1μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_One       | -0.1μs  | Baseline: 0.5μs  ▶ {...} | Results: 0.4μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_Many      | +0.0μs  | Baseline: 0.3μs  ▶ {...} | Results: 0.3μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_OneYield  | -1.3μs  | Baseline: 1.9μs  ▶ {...} | Results: 0.6μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_ManyYield | -0.7μs  | Baseline: 1.2μs  ▶ {...} | Results: 0.5μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | Create         | -0.6μs  | Baseline: 0.7μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | Connect        | -0.7μs  | Baseline: 0.9μs  ▶ {...} | Results: 0.2μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | Once           | -0.5μs  | Baseline: 0.7μs  ▶ {...} | Results: 0.2μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | Fire_None      | -0.0μs  | Baseline: 0.1μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | Fire_One       | +0.4μs  | Baseline: 0.4μs  ▶ {...} | Results: 0.8μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | Fire_Many      | +0.5μs  | Baseline: 0.1μs  ▶ {...} | Results: 0.6μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | Fire_OneYield  | +0.4μs  | Baseline: 0.7μs  ▶ {...} | Results: 1.0μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | Fire_ManyYield | +0.7μs  | Baseline: 0.2μs  ▶ {...} | Results: 0.9μs  ▶ {...}  -  Server - Signal_Certifications:222
 ☑ | Disconnect     | -0.1μs  | Baseline: 0.2μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | DisconnectAll  | -6.6μs  | Baseline: 7.7μs  ▶ {...} | Results: 1.1μs  ▶ {...}  -  Server - Signal_Certifications:222
+☑ | DisconnectAll  | -7.0μs  | Baseline: 8.1μs  ▶ {...} | Results: 1.1μs  ▶ {...}  -  Server - Signal_Certifications:222
 --------------------------------------------------------------------------------------  -  Server - Signal_Certifications:1965
 ✅ | Speed Certified         |  -  Server - Signal_Certifications:122
 ```

@@ -39,6 +39,7 @@ export default defineConfig({
 		  { text: 'Performance', link: '/additional-info/performance' },
 		  { text: 'Gohan\'s Certification', link: '/additional-info/gohans-certification' },
 		  { text: 'Gotchas', link: '/additional-info/gotchas' },
+		  { text: 'Future Considerations', link: '/additional-info/future-considerations' },
         ]
       }
     ],

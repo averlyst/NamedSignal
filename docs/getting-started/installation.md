@@ -35,7 +35,7 @@ If you prefer, you can build NamedSignal directly from source using Rojo.
 ```bash
 git clone https://github.com/Nowoshire/NamedSignal.git
 cd NamedSignal
-rojo build --output "../Signal.rbxm"
+rojo build --output "Signal.rbxm"
 ```
 
-Then move the built `Signal.rbxm` to your desired location.
+Then insert the built `Signal.rbxm` into your desired location.
