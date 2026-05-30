@@ -1,11 +1,10 @@
 --!strict
 
 -- Type Functions --
-
 --[[
 	Makes all read-only or write-only properties to be both writable and readable.
 ]]
-type function internal(ty: type)
+type function internal(ty: type): (type)
 	const function processType(t: type): (type)
 		const tTag = t.tag
 		if tTag == "table" then
@@ -47,7 +46,7 @@ type function internal(ty: type)
 	return processType(ty)
 end
 
-type function SignalFireSignature(signal: type, signature: type, fallback: type)
+type function SignalFireSignature(signal: type, signature: type, fallback: type): (type)
 	const signatureTag = signature.tag
 	if signatureTag == "unknown" then
 		-- Return fallback for uninstantiated generic during Signal.new()
@@ -70,7 +69,7 @@ type function SignalFireSignature(signal: type, signature: type, fallback: type)
 	return types.newfunction(params)
 end
 
-type function SignalWaitSignature(signal: type, signature: type, fallback: type)
+type function SignalWaitSignature(signal: type, signature: type, fallback: type): (type)
 	const signatureTag = signature.tag
 	if signatureTag == "unknown" then
 		-- Return fallback for uninstantiated generic during Signal.new()
@@ -88,8 +87,56 @@ type function SignalWaitSignature(signal: type, signature: type, fallback: type)
 	)
 end
 
+-- Extracts the connection signature from a given RBXScriptSignal if available.
+type function SignatureFromRBXScriptSignal(rbxSignal: type, fallback: type): (type)
+	const rbxSignalTag = rbxSignal.tag
+	
+	-- In Roblox, RBXScriptSignals are externtypes, while in Luau LSP they are tabletypes.
+	local connectSignature: type?
+	if rbxSignalTag == "any" then
+		return fallback
+	elseif rbxSignalTag == "extern" then
+		-- for some reason we can't use readproperty on externtype
+		for keytype, rwType in rbxSignal:properties() do
+			if keytype:value() == "Connect" then
+				connectSignature = rwType.read
+				break
+			end
+		end
+		
+		if not connectSignature then
+			print(`WrapSignal<RbxSignal> expects a 'RBXScriptSignal' type for \`RbxSignal\`, got '{rbxSignalTag}' type instead.`)
+			return fallback
+		end
+	elseif rbxSignalTag == "table" then
+		connectSignature = rbxSignal:readproperty(types.singleton("Connect"))
+	else
+		print(`WrapSignal<RbxSignal> expects a 'RBXScriptSignal' type for \`RbxSignal\`, got '{rbxSignalTag}' type instead.`)
+		return fallback
+	end
+	
+	if not connectSignature or connectSignature.tag ~= "function" then
+		print(`WrapSignal<RbxSignal> expects a 'RBXScriptSignal' type for \`RbxSignal\`, got invalid Connect signature.`)
+		return fallback
+	end
+
+	const connectHead = connectSignature:parameters().head
+	if not connectHead then
+		print(`WrapSignal<RbxSignal> expects a 'RBXScriptSignal' type for \`RbxSignal\`, got headless Connect signature.`)
+		return fallback
+	end
+
+	const callback = connectHead[2] -- first param is self
+	if not callback or callback.tag ~= "function" then
+		print(`WrapSignal<RbxSignal> expects a 'RBXScriptSignal' type for \`RbxSignal\`, got invalid callback signature.`)
+		return fallback
+	end
+
+	return callback
+end
+
 -- Connection Type --
-export type Connection<Signature = () -> ()> = {
+export type Connection<Signature = (...any) -> ()> = {
 	read Signal: Signal<Signature>,
 	read Connected: boolean,
 	read Callback: Signature,
@@ -205,6 +252,8 @@ type BaseSignal<Signal, Connection, Signature> = {
 
 export type Signal<Signature = (...any) -> ()> = BaseSignal<Signal<Signature>, Connection<Signature>, Signature> & {
 	-- UDTF generated Signatures
+	-- Currently, recursive types are not serializable by UDTFs, so `any` is used in place of the proper Signal type
+	-- `any` still allows the method to show in autocomplete suggestions, and self not being checked is not a huge deal.
 	read Fire: SignalFireSignature<any, Signature, (...any) -> ()>,
 	read FireNow: SignalFireSignature<any, Signature, (...any) -> ()>,
 	read Wait: SignalWaitSignature<any, Signature, (...any) -> ()>,
@@ -214,9 +263,10 @@ export type Signal<Signature = (...any) -> ()> = BaseSignal<Signal<Signature>, C
 export type SignalMutation = {
 	f: ((InternalSignal | InternalConnection | thread, InternalSignal?) -> ())?, -- for any mutation that isn't fire
 	c: InternalConnection?, -- for connection operations
-	p: thread?, -- yielded thread that returns the stored parameters for deferred fire when resumed.
+	a: {any}?, -- array of stored arguments from deferred fire
 }
 
+-- Don't need to use internal UDTF here as there is no read-only public API that we write to.
 export type InternalSignal = Signal & {
 	_head: InternalConnection?,
 	_tail: InternalConnection?,
@@ -224,6 +274,7 @@ export type InternalSignal = Signal & {
 	_mutations: {
 		{SignalMutation} -- [re-entrancy depth]: ...
 	},
+	_wrapConnection: RBXScriptConnection?
 }
 
 export type GenericSignal<Params... = ...any> = BaseSignal<GenericSignal<Params...>, Connection<(Params...) -> ()>, (Params...) -> ()> & {
@@ -253,5 +304,8 @@ export type GenericSignal<Params... = ...any> = BaseSignal<GenericSignal<Params.
 		function(self: GenericSignal<Params...>, ...: Params...) end
 	),
 }
+
+export type WrapSignal<RBXSignal> = Signal<SignatureFromRBXScriptSignal<RBXSignal, (...any) -> ()>>
+export type WrapConnection<RBXSignal> = Connection<SignatureFromRBXScriptSignal<RBXSignal, (...any) -> ()>>
 
 return nil

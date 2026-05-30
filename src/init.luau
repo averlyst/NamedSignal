@@ -46,12 +46,13 @@ const SIGNAL_BEHAVIOR: "Immediate" | "Deferred"
 	= "Immediate"
 
 -- Controls the quality of error information provided in the output.
+-- "Auto" uses "Full" in Roblox Studio, and "Warn" in production.
 -- "Full" uses task.spawn when available, providing the full error traceback with jump-to functionality, at the cost of worse performance.
 -- "Warn" uses coroutine.resume but outputs the error message with a simplified traceback. Better performance than "Full".
 -- "None" uses coroutine.resume but provides no error information. Best performance but not recommended for typical use.
--- Has no effect when SIGNAL_BEHAVIOR is set to "Deferred", "Warn" is the recommended default.
-const ERROR_INFO_MODE: "Full" | "Warn" | "None"
-	= "Warn"
+-- Has no effect when SIGNAL_BEHAVIOR is set to "Deferred", "Auto" is the recommended default.
+const ERROR_INFO_MODE: "Auto" | "Full" | "Warn" | "None"
+	= "Auto"
 
 -- Imports --
 const Types = require("@self/Types")
@@ -59,13 +60,20 @@ const Types = require("@self/Types")
 -- Thread Recycling --
 
 --[[
-	Creates and resumes a thread immediately, then resumes it.
+	Creates and resumes a thread immediately, then returns it.
 	Significantly faster than <code>task.spawn</code>.
 ]]
 const function spawnThread <A..., R...>(func: (A...) -> (R...), ...: A...): (thread)
 	const thread = coroutine.create(func)
 	coroutine.resume(thread, ...)
 	return thread
+end
+
+--[[
+	Returns a boolean indicating if the given thread is resumable.
+]]
+const function isThreadResumable(co: thread): (boolean)
+	return coroutine.status(co) == "suspended"
 end
 
 -- "Fast" thread cache, slightly improves the performance of non-yielding dispatch.
@@ -124,7 +132,7 @@ const function getAvailableThread(): (thread)
 	end
 
 	-- Fix an edge case where if the cached handler thread is not suspended, the first listener will not run on the next invocation.
-	if coroutine.status(thread) ~= "suspended" then
+	if not isThreadResumable(thread) then
 		return spawnThread(eventHandlerRoutine)
 	end
 
@@ -136,23 +144,30 @@ end
 -- Using a mix of if-then-else expression and the and-or ternary-like idiom to utilize its fallback behavior.
 const resumeListener = task and (
 	if SIGNAL_BEHAVIOR == "Deferred" then task.defer
-	elseif ERROR_INFO_MODE == "Full" then task.spawn
-	else nil -- Fall back to below
-) or ( -- Task library is unavailable or a performance ERROR_INFO_MODE was chosen
-	if ERROR_INFO_MODE == "Warn" then (function()
-		const output = warn or print -- The environment might not have warn, fallback to print if that's the case.
+	elseif ERROR_INFO_MODE == "Full"
+		or ERROR_INFO_MODE == "Auto"
+		and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
+	then task.spawn
+	else nil -- Fallback to below
+) or (
+	-- Task library is unavailable or a performance ERROR_INFO_MODE was chosen
+	if ERROR_INFO_MODE == "None" then coroutine.resume
+	else (function() -- "Auto" in production or "Warn" ERROR_INFO_MODE
+		const output = warn or print -- Portability, the environment might not have warn.
+
 		return function(co: thread, ...: any)
 			const success, err = coroutine.resume(co, ...)
 			if success then return end
 
+			-- About as close as we can get to normal error semantics, just with some minor styling differences.
+			-- Avoiding tostring conversions to get proper outputs of non-string error messages.
 			output(
 				"Error occurred during invocation:",
 				if err ~= nil then err else "Error occurred, no output from Luau.",
-				debug.traceback("\nStack Begin", 4) .. "Stack End"
+				debug.traceback(co, "\nStack Begin") .. "Stack End"
 			)
 		end
 	end)()
-	else coroutine.resume -- "None" ERROR_INFO_MODE
 )
 
 -- Deferred Mutation Helpers --
@@ -190,7 +205,7 @@ end
 const Connection = {}
 Connection.__index = Connection
 
-export type Connection<Signature = () -> ()> = Types.Connection<Signature>
+export type Connection = Types.Connection
 type InternalConnection = Types.InternalConnection
 
 --[[
@@ -221,17 +236,18 @@ const function unlinkConnection(connection: InternalConnection, signal: Internal
 	connection.Connected = false
 
 	-- Bridge gaps, set prev next to this one's next and vice versa.
+	-- Do NOT clear pointers, as it can cause iterator invalidation.
 	const prv, nxt = connection._prev, connection._next
 
 	if prv then
 		prv._next = nxt
-	else -- This was the first link in the list, set to next
+	else -- This was the first link in the list, set head to next
 		signal._head = nxt
 	end
 
 	if nxt then
 		nxt._prev = prv
-	else -- This was the last link in the list, set to previous
+	else -- This was the last link in the list, set tail to previous
 		signal._tail = prv
 	end
 end
@@ -283,10 +299,13 @@ const Signal = {}
 Signal.__index = Signal
 
 -- NOTE: UDTFs currently can't serialize recursive types, use the GenericSignal type instead if you run into such issues.
-export type Signal<Signature = (...unknown) -> ()> = Types.Signal<Signature>
+export type Signal<Signature = (...any) -> ()> = Types.Signal<Signature>
 
 -- A generics-only alternative as a workaround for types that UDTFs can't serialize, or for compatibility with other signal implementations.
 export type GenericSignal<Params...> = Types.GenericSignal<Params...>
+
+-- A signal that is wrapped around an RBXScriptSignal, infers signature from it if available.
+export type WrapSignal<RBXSignal> = Types.WrapSignal<RBXSignal>
 
 type InternalSignal = Types.InternalSignal
 
@@ -318,9 +337,9 @@ const function baseDisconnectAll(signal: InternalSignal): ()
 end
 
 --[[
-	Disconnects all connections from the signal, but also sets _next to nil to interrupt iteration.
+	Disconnects all connections from the signal, but also sets _next to nil to interrupt dispatch.
 ]]
-const function baseDisconnectAllRemoveNext(signal: InternalSignal): ()
+const function baseDisconnectAllInterrupt(signal: InternalSignal): ()
 	local connection = signal._head
 	while connection do
 		connection.Connected = false
@@ -346,15 +365,20 @@ function Signal.DisconnectAll(self: InternalSignal): ()
 end
 
 function Signal.DisconnectAllNow(self: InternalSignal): ()
-	baseDisconnectAllRemoveNext(self)
+	baseDisconnectAllInterrupt(self)
 	self._head = nil
 	self._tail = nil	
 end
 
 const function destroy(signal: InternalSignal): ()
+	const wrapConnection = signal._wrapConnection
+	if wrapConnection then
+		wrapConnection:Disconnect()
+	end
+
 	cancelAllMutations(signal)
 	baseDisconnectAll(signal)
-	
+
 	table.clear(signal)
 	setmetatable(signal, nil)
 end
@@ -370,13 +394,7 @@ function Signal.Destroy(self: InternalSignal): ()
 	destroy(self)
 end
 
-function Signal.DestroyNow(self: InternalSignal): ()
-	cancelAllMutations(self)
-	baseDisconnectAllRemoveNext(self)
-
-	table.clear(self)
-	setmetatable(self, nil)
-end
+Signal.DestroyNow = destroy
 
 --[[
 	Returns a new unlinked Connection, used during deferred connections where it's not immediately connected.
@@ -456,56 +474,40 @@ Signal.Once = signalOnce
 Signal.OnceNow = signalOnceNow
 
 --[[
-	Yields the current thread, and when resumed, returns the given parameters.
-	Used by <code>storeVariadics</code>.
-]]
-const function yieldVariadicStack(...: any)
-	coroutine.yield()
-	return ...
-end
-
---[[
-	Stores the given parameters in a thread that immediately yields, and that when resumed, returns the parameters.
-]]
-const function storeVariadics<V...>(...: V...): (thread)
-	return spawnThread(yieldVariadicStack, ...)
-end
-
---[[
-	Retrieves the variadic parameters stored in the given thread created by <code>storeVariadics</code>.
-]]
-const function retrieveVariadics(thread: thread): (...any)
-	-- Select with index 2, as coroutine.resume returns a boolean as the first argument, which we don't want.
-	return select(2, coroutine.resume(thread))
-end
-
---[[
 	Yields the running thread, then unlinks the given connection from the signal, and returns any arguments returned from <code>coroutine.yield</code>.
 ]]
-const function waitUnlinkAndReturnVargs(connection: InternalConnection, signal: InternalSignal): (...any)
-	const args = storeVariadics(coroutine.yield())
-	unlinkConnection(connection, signal)
-	return retrieveVariadics(args)
+const function safeAwaitSignal(connection: InternalConnection, signal: InternalSignal): (...any)
+	const args = {coroutine.yield()}
+	unlinkConnection(connection, signal) -- Unlink after resuming to account for external resumption
+	return unpack(args)
+end
+
+const function resumeAwaiting(thread: thread, ...: any)
+	-- Check that it is resumable to avoid nuisance errors.
+	-- Not ideal but we don't have access to any information that would allow automatic cleanup.
+	if isThreadResumable(thread) then
+		resumeListener(thread, ...)
+	end
 end
 
 function Signal.Wait(self: InternalSignal): (...any)
 	const thisThread = coroutine.running()
-	return waitUnlinkAndReturnVargs(signalOnce(self, function(...: any)
-		resumeListener(thisThread, ...)
+	return safeAwaitSignal(signalOnce(self, function(...: any)
+		resumeAwaiting(thisThread, ...)
 	end), self)
 end
 
 function Signal.WaitNow(self: InternalSignal): (...any)
 	const thisThread = coroutine.running()
-	return waitUnlinkAndReturnVargs(signalOnceNow(self, function(...: any)
-		resumeListener(thisThread, ...)
+	return safeAwaitSignal(signalOnceNow(self, function(...: any)
+		resumeAwaiting(thisThread, ...)
 	end), self)
 end
 
 --[[
 	Calls all currently connected functions and processes first-level mutations.
 ]]
-const function invokeListenersAndProcessMutations(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any)
+const function processDispatch(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any)
 	local connection = signal._head
 	while connection do
 		const thread = getAvailableThread()
@@ -526,7 +528,7 @@ const function invokeListenersAndProcessMutations(signal: InternalSignal, mutati
 		if not func then
 			-- The function is only undefined for re-entrant firing.
 			-- As re-entrant firing creates a new mutation level, no more mutations will be on this level.
-			invokeListenersAndProcessMutations(signal, mutationList, retrieveVariadics(mutation.p :: thread))
+			processDispatch(signal, mutationList, unpack(mutation.a :: {any}))
 			return
 		end
 
@@ -544,13 +546,16 @@ function Signal.Fire(self: InternalSignal, ...: any)
 
 	if self._firing then
 		enqueueMutationLevel(mutations, {
-			p = storeVariadics(...)
+			a = {...}
 		})
 		return
 	end
 
 	self._firing = true
-	invokeListenersAndProcessMutations(self, mutations, ...)
+	processDispatch(self, mutations, ...)
+
+	-- Only the first non-reentrant fire is not queued, and as it's "blocking" we can safely clear _firing unconditionally
+	-- since all other operations will have completed during invocation.
 	self._firing = nil
 end
 
@@ -558,7 +563,10 @@ function Signal.FireNow(self: InternalSignal, ...: any)
 	const mutations = self._mutations
 
 	self._firing = true
-	invokeListenersAndProcessMutations(self, mutations, ...)
+	processDispatch(self, mutations, ...)
+
+	-- FireNow cannot unconditionally clear _firing because it skips re-entrancy, and as such can return before other
+	-- invocations complete. Check that there are no more mutations before resetting the flag.
 	if not mutations[1] then
 		self._firing = nil
 	end
@@ -574,6 +582,21 @@ function NamedSignal.new<Signature>(): (Signal<Signature>)
 	return setmetatable({
 		_mutations = {},
 	}, Signal) :: any
+end
+
+--[[
+	Returns a new <code>Signal</code> that fires when the given <code>RBXScriptSignal</code> fires.
+]]
+function NamedSignal.wrap<RBXSignal>(rbxSignal: RBXSignal & RBXScriptSignal): (WrapSignal<RBXSignal>)
+	const signal: InternalSignal = setmetatable({
+		_mutations = {},
+	}, Signal)
+
+	signal._wrapConnection = rbxSignal:Connect(function(...)
+		signal:Fire(...)
+	end)
+
+	return signal :: any
 end
 
 return NamedSignal
