@@ -29,11 +29,3 @@ features:
     details: More efficient than engine APIs by working in pure Luau.
     link: additional-info/performance
 ---
-
-## Yet *Another* Signal Library?<!-- markdownlint-disable-line MD041 -->
-
-I suppose so! I built NamedSignal out of frustration because other libraries just didn't have the DX I was looking for.
-
-Over time, I've expanded NamedSignal to be **more reliable and convenient**, as well as **fixing long-standing bugs** that are *still* present in other popular libraries, such as the dreaded `cannot resume non-suspended coroutine`/`cannot spawn non-suspended coroutine with arguments` error, and many more improvements!
-
-Check out the various documentation pages to **learn what sets NamedSignal apart from the others**.
