@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.1.0
+	v2.1.1
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -205,7 +205,8 @@ end
 const Connection = {}
 Connection.__index = Connection
 
-export type Connection = Types.Connection
+export type Connection<Signature> = Types.Connection<Signature>
+export type GenericConnection<Params...> = Types.GenericConnection<Params...>
 type InternalConnection = Types.InternalConnection
 
 --[[

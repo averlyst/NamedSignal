@@ -1,5 +1,13 @@
 <!-- markdownlint-disable-file MD025 MD033 MD024 -->
 
+# Version 2.1.1
+
+## Fixes
+
+Fix `GenericSignal` unintentionally still using UDTFs in Connection type with new `GenericConnection` type.
+
+See the [API Reference](https://nowoshire.github.io/NamedSignal/api-reference/api-overview#genericconnection-type-usage) for usage information.
+
 # Version 2.1.0
 
 Back again with more improvements!

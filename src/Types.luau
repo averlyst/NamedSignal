@@ -136,8 +136,8 @@ type function SignatureFromRBXScriptSignal(rbxSignal: type, fallback: type): (ty
 end
 
 -- Connection Type --
-export type Connection<Signature = (...any) -> ()> = {
-	read Signal: Signal<Signature>,
+type BaseConnection<Signal, Signature> = {
+	read Signal: Signal,
 	read Connected: boolean,
 	read Callback: Signature,
 	
@@ -145,35 +145,38 @@ export type Connection<Signature = (...any) -> ()> = {
 		--[[
 			Disconnects the <code>Connection</code> from the <code>Signal</code>.
 		]]
-		function(self: Connection<Signature>): () end
+		function(self: BaseConnection<Signal, Signature>): () end
 	),
 	read DisconnectNow: typeof(
 		--[[
 			The immediate mode equivalent of <code>Connection:Disconnect()</code>.
 		]]
-		function(self: Connection<Signature>): () end
+		function(self: BaseConnection<Signal, Signature>): () end
 	),
 	
 	read Reconnect: typeof(
 		--[[
 			Reconnects the <code>Connection</code> to the <code>Signal</code>.
 		]]
-		function(self: Connection<Signature>): () end
+		function(self: BaseConnection<Signal, Signature>): () end
 	),
 	read ReconnectNow: typeof(
 		--[[
 			The immediate mode equivalent of <code>Connection:Reconnect()</code>.
 		]]
-		function(self: Connection<Signature>): () end
+		function(self: BaseConnection<Signal, Signature>): () end
 	),
 	
 	read Destroy: typeof(
 		--[[
 			Destroys the <code>Connection</code>.
 		]]
-		function(self: Connection<Signature>): () end
+		function(self: BaseConnection<Signal, Signature>): () end
 	),
 }
+
+export type Connection<Signature = (...any) -> ()> = BaseConnection<Signal<Signature>, Signature>
+export type GenericConnection<Params...> = BaseConnection<GenericSignal<Params...>, (Params...) -> ()>
 
 export type InternalConnection = internal<Connection> & {
 	_prev: InternalConnection?,
@@ -277,7 +280,7 @@ export type InternalSignal = Signal & {
 	_wrapConnection: RBXScriptConnection?
 }
 
-export type GenericSignal<Params... = ...any> = BaseSignal<GenericSignal<Params...>, Connection<(Params...) -> ()>, (Params...) -> ()> & {
+export type GenericSignal<Params... = ...any> = BaseSignal<GenericSignal<Params...>, GenericConnection<Params...>, (Params...) -> ()> & {
 	-- Generic Signatures
 	read Fire: typeof(
 		--[[
