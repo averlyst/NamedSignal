@@ -176,7 +176,7 @@ type BaseConnection<Signal, Signature> = {
 }
 
 export type Connection<Signature = (...any) -> ()> = BaseConnection<Signal<Signature>, Signature>
-export type GenericConnection<T...> = BaseConnection<GenericSignal<T...>, (T...) -> ()>
+export type GenericConnection<Params...> = BaseConnection<GenericSignal<Params...>, (Params...) -> ()>
 
 export type InternalConnection = internal<Connection> & {
 	_prev: InternalConnection?,

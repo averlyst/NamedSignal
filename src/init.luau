@@ -206,7 +206,7 @@ const Connection = {}
 Connection.__index = Connection
 
 export type Connection<Signature> = Types.Connection<Signature>
-export type GenericConnection<T...> = Types.GenericConnection<T...>
+export type GenericConnection<Params...> = Types.GenericConnection<Params...>
 type InternalConnection = Types.InternalConnection
 
 --[[
