@@ -98,6 +98,56 @@ local helloEvent = Signal.new() :: Signal.Signal<(subject: "world") -> ()>
 
 ---
 
+### `Connection<Signature>` {#connection-type}
+
+The `Connection` type. See [`Connection (Class)`](#connection) for API.
+
+#### Usage {#connection-type-usage}
+
+```luau
+local helloEvent = Signal.new() :: Signal.Signal<(subject: "world") -> ()>
+local helloConnection: Signal.Connection<(subject: "world") -> ()> -- [!code highlight]
+
+helloConnection = helloEvent:Connect(function(subject: "world")
+	print(`Hello, {subject}!`)
+end)
+```
+
+---
+
+### `WrapSignal<RbxSignal>` {#wrapsignal-type}
+
+A [`Signal`](#signal-type) type that infers a signature from the given `RBXScriptSignal` when available.
+
+#### Usage {#wrapsignal-type-usage}
+
+```luau
+-- As a type:
+type Heartbeat = Signal.WrapSignal<typeof(game:GetService("RunService").Heartbeat)> -- [!code highlight]
+
+-- Or inferred from constructor:
+local heartbeatEvent = Signal.wrap(game:GetService("RunService").Heartbeat)
+```
+
+---
+
+### `WrapConnection<RbxSignal>` {#wrapconnection-type}
+
+A [`Connection`](#connection-type) type that infers a signature from the given `RBXScriptSignal` when available.
+
+#### Usage {#wrapconnection-type-usage}
+
+```luau
+local heartbeatEvent = Signal.wrap(game:GetService("RunService").Heartbeat)
+local heartbeatConnection: Signal.WrapConnection<typeof(game:GetService("RunService").Heartbeat)> -- [!code highlight]
+
+heartbeatConnection = heartbeatEvent:Connect(function(deltaTime: number)
+	print(`deltaTime: {deltaTime}`)
+end)
+```
+
+---
+
 ### `GenericSignal<Params...>` {#genericsignal-type}
 
 The pure generics `Signal` type. See [`Signal (Class)`](#signal) for API.
@@ -122,51 +172,20 @@ Signal.GenericSignal<("meow", ...":3")>
 
 ---
 
-### `WrapSignal<RbxSignal>` {#wrapsignal-type}
+### `GenericConnection<Params...>` {#genericconnection-type}
 
-A [`Signal`](#signal-type) type that infers a signature from the given `RBXScriptSignal` when available.
+The pure generics `Connection` type. See [`Connection (Class)`](#connection) for API.
 
-#### Usage {#wrapsignal-type-usage}
+Exists as a workaround for types that can't be serialized by UDTFs (such as **recursive types**), and for backwards compatibility with other Signal implementations.
 
-```luau
--- As a type:
-type Heartbeat = Signal.WrapSignal<typeof(game:GetService("RunService").Heartbeat)> -- [!code highlight]
-
--- Or inferred from constructor:
-local heartbeatEvent = Signal.wrap(game:GetService("RunService").Heartbeat)
-```
-
----
-
-### `Connection<Signature>` {#connection-type}
-
-The `Connection` type. See [`Connection (Class)`](#connection) for API.
-
-#### Usage {#connection-type-usage}
+#### Usage {#genericconnection-type-usage}
 
 ```luau
-local helloEvent = Signal.new() :: Signal.Signal<(subject: "world") -> ()>
-local helloConnection: Signal.Connection<(subject: "world") -> ()> -- [!code highlight]
+local helloEvent = Signal.new() :: Signal.GenericSignal<"world">
+local helloConnection: Signal.GenericConnection<"world"> -- [!code highlight]
 
 helloConnection = helloEvent:Connect(function(subject: "world")
 	print(`Hello, {subject}!`)
-end)
-```
-
----
-
-### `WrapConnection<RbxSignal>` {#wrapconnection-type}
-
-A [`Connection`](#connection-type) type that infers a signature from the given `RBXScriptSignal` when available.
-
-#### Usage {#wrapconnection-type-usage}
-
-```luau
-local heartbeatEvent = Signal.wrap(game:GetService("RunService").Heartbeat)
-local heartbeatConnection: Signal.WrapConnection<typeof(game:GetService("RunService").Heartbeat)> -- [!code highlight]
-
-heartbeatConnection = heartbeatEvent:Connect(function(deltaTime: number)
-	print(`deltaTime: {deltaTime}`)
 end)
 ```
 
