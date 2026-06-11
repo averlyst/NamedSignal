@@ -6,14 +6,6 @@ This page collects common issues and misunderstandings within code that uses Nam
 
 NamedSignal is a pure-Luau implementation, and as such cannot facilitate communication between Luau VMs, and also cannot communicate across the network boundary. Roblox engine APIs should be used instead, such as the [Actor Messaging API](https://create.roblox.com/docs/scripting/multithreading#actor-messaging) or [RemoteEvent](https://create.roblox.com/docs/reference/engine/classes/RemoteEvent) Instance.
 
-## Errors are not logged when using coroutine resumption
-
-Errors don't get logged in the output when using coroutine invoke resumption, enable `USE_TASK_LIBRARY` in the main NamedSignal module to get error information (if available).
-
-```luau
-const USE_TASK_LIBRARY = true
-```
-
 ## Re-entrancy does not yield
 
 Unlike other Signal libraries that implement deferred mutations, NamedSignal does not yield the calling thread for re-entrant firing. See ['Not Quite to Spec'](gohans-certification#not-quite-to-spec) for detailed information and reasoning.
