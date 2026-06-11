@@ -44,6 +44,8 @@ export default defineConfig({
       }
     ],
 
+	outline: [2, 3],
+
     socialLinks: [
       { icon: 'github', link: 'https://github.com/Nowoshire/NamedSignal' },
 	  { icon: 'robloxstudio', link: 'https://devforum.roblox.com/t/4341837' }
