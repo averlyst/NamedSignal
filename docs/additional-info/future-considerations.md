@@ -16,7 +16,7 @@ This proposal would be the most significant change in the Signal event-dispatche
 
 Currently, NamedSignal implements named parameters by using a function signature, which *does* allow naming parameters, but mutation of the signature **requires a User Defined Type Function (UDTF)**. Not only is this complicated, it's also quite **fragile in practice**, with examples being:
 
-- Recursive types are unserializable, thus are unusable with the normal `Signal` type.
+- Recursive signals with themselves in their parameters are unsupported and result in a type error.
 - Parameter names are still lost outside of connections, meaning less useful information in `:Fire()` and similar methods.
   - This limitation could technically be resolved if another RFC is implemented — [Parameter names in `types.newfunction()`](#parameter-names-in-types-newfunction).
 - Slower type inference and generally less reliable.

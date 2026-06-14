@@ -152,7 +152,7 @@ end)
 
 The pure generics `Signal` type. See [`Signal (Class)`](#signal) for API.
 
-Exists as a workaround for types that can't be serialized by UDTFs (such as **recursive types**), and for backwards compatibility with other Signal implementations.
+Exists as a workaround for types that can't be serialized by UDTFs, such as recursive signals with themselves in their parameters, and for backwards compatibility with other Signal implementations.
 
 #### Usage {#genericsignal-type-usage}
 
@@ -176,7 +176,7 @@ Signal.GenericSignal<("meow", ...":3")>
 
 The pure generics `Connection` type. See [`Connection (Class)`](#connection) for API.
 
-Exists as a workaround for types that can't be serialized by UDTFs (such as **recursive types**), and for backwards compatibility with other Signal implementations.
+Exists as a workaround for types that can't be serialized by UDTFs, such as recursive signals with themselves in their parameters, and for backwards compatibility with other Signal implementations.
 
 #### Usage {#genericconnection-type-usage}
 
