@@ -80,7 +80,7 @@ end
 local tL1: thread?
 
 -- "Slow" thread cache
-const threadPool = {} :: {thread}
+const threadPool: {thread} = {}
 
 --[[
 	Calls the given callback with the given arguments, then adds the thread into the cache for reuse.
