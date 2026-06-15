@@ -7,13 +7,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Version 2.1.2
+## [Unreleased]
+
+## [2.1.2] - 2026-06-03
 
 ### Fixes
 
 Fixed wally installation once more, `default.project.json` wasn't getting included.
 
-## Version 2.1.1
+## [2.1.1] - 2026-06-02
 
 ### Fixes
 
@@ -21,7 +23,7 @@ Fix `GenericSignal` unintentionally still using UDTFs in Connection type with ne
 
 See the [API Reference](https://nowoshire.github.io/NamedSignal/api-reference/api-overview#genericconnection-type-usage) for usage information.
 
-## Version 2.1.0
+## [2.1.0] - 2026-05-31
 
 Back again with more improvements!
 
@@ -56,15 +58,11 @@ Back again with more improvements!
 - `wally.toml` has been moved back to the project root, the `wally` module will no longer appear in builds.
 - Minor internal refactoring.
 
-<br>
-
-## Version 2.0.4
+## [2.0.4] - 2026-04-17
 
 Fix instance name and wally installation.
 
-<br>
-
-## Version 2.0.0
+## [2.0.0] - 2026-04-16
 
 After much wait, NamedSignal v2.0.0 is here!
 
@@ -88,34 +86,24 @@ After much wait, NamedSignal v2.0.0 is here!
 - [Documentation](https://Nowoshire.github.io/NamedSignal/) has been completely rewritten using VitePress, new benchmarks are still a work in progress.
 - Slightly improve the performance of non-yielding dispatch by implementing a "fast" cache as a local variable.
 
-<br>
-
-## Version 1.2.1
+## [1.2.1] - 2026-02-11
 
 Removed monotonic connection counters, as they were no longer necessary with deferred mutations
 
-<br>
-
-## Version 1.2.0
+## [1.2.0] - 2026-02-10
 
 Comply with [GohanDucis Class 3 signal certification](https://devforum.roblox.com/t/signal-certifications-classes-guide/4263792).
 
-<br>
-
-## Version 1.1.0
+## [1.1.0] - 2026-02-09
 
 Prevent connections made during invocation from being fired (with minimal impact to performance).
 
-<br>
-
-## Version 1.0.0
+## [1.0.0] - 2026-02-08
 
 Minor code cleanup and type improvements, add new benchmarks and wally install.
 
 Bumped version to major 1 in accordance with Semantic Versioning 2.0,0, indicating public release and stabiliity guarantee.
 
-<br>
-
-## Version 0.1.0
+## [0.1.0] - 2026-02-07
 
 Initial release of NamedSignal
