@@ -1,4 +1,6 @@
-# Built Model files
+# Local builds
+*.rbxlx
+*.rbxl
 *.rbxm
 *.rbxmx
 
@@ -6,16 +8,23 @@
 *.rbxlx.lock
 *.rbxl.lock
 
+# Local editor files
 sourcemap.json
 .vscode
+
+# Unncessary Vitepress files 
+/docs/.vitepress/dist
+/docs/.vitepress/cache
+
+/node_modules
+
+# Local wally files
+/Packages
+/wally.lock
 
 # Affinity files
 *.af~lock~
 *.af
-
-# Vitepress files
-docs/.vitepress/dist
-docs/.vitepress/cache
 
 # Tests aren't ready yet
 tests
