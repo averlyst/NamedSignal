@@ -42,3 +42,9 @@ As a side effect, the `GenericSignal` type can be merged into the regular `Signa
 This proposal would allow UDTF-generated signatures to have properly named parameters, such as in `:Fire()` and other methods.
 
 However, backwards compatibility concerns at the time of writing prevent this RFC from being accepted and merged, and [Names in Type Packs](#names-in-type-packs) would offer far better inference and DX. So this would unlikely be the path that NamedSignal will take.
+
+## [Function `coroutine.finally(thread, callback)`](https://github.com/jkelaty-rbx/rfcs/blob/coroutine-finally/docs/function-coroutine-finally.md)
+
+> <small>See the [Pull Request](https://github.com/luau-lang/rfcs/pull/187)</small>
+
+This proposal may allow cleaner handling of threads, improving performance and reducing possibilities of memory leaks under conditions that would typically be misuse.

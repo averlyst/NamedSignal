@@ -13,13 +13,11 @@ Overview of the NamedSignal API — the module Interface, `Signal` and `Connecti
 | `.new()`  | `read <Signature>() -> (Signal<Signature>)`                                                                     | Returns a new [`Signal`](#signal).                                                   |
 | `.wrap()` | <code>read \<RBXSignal>(rbxSignal: RBXSignal) -> (<a href="#wrapsignal-type">WrapSignal\<RBXSignal></a>)</code> | Returns a new [`Signal`](#signal) that fires when the given `RBXScriptSignal` fires. |
 
-::: warning
-
-#### `:Destroy()` ephemeral `Signal.wrap()`s
-
-As `Signal.wrap()` makes a connection to the given `RBXScriptSignal`, not calling `:Destroy()` on temporary wraps can cause **memory leaks**!
-
-:::
+> [!IMPORTANT]
+>
+> #### `:Destroy()` ephemeral `Signal.wrap()`s
+>
+> As `Signal.wrap()` makes a connection to the given `RBXScriptSignal`, not calling `:Destroy()` on temporary wraps can cause **memory leaks**!
 
 ## Classes
 
