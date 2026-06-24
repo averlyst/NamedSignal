@@ -10,7 +10,7 @@
 		https://personal.averlyst.dev/NamedSignal
 
 	This software is licensed under the MIT License:
-		https://github.com/Averlyst/NamedSignal/blob/main/LICENSE
+		https://github.com/averlyst/NamedSignal/blob/main/LICENSE
 
 		MIT License
 
