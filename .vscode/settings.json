@@ -1,0 +1,13 @@
+{
+	"luau-lsp.fflags.enableNewSolver": true,
+	"markdownlint.config": {
+		"MD010": false,
+		"MD033": false
+	},
+	"editor.renderWhitespace": "all",
+	"luau-lsp.completion.imports.separateGroupsWithLine": true,
+	"luau-lsp.completion.imports.stringRequires.enabled": true,
+	"luau-lsp.completion.imports.useConst": true,
+	"luau-lsp.inlayHints.functionReturnTypes": true,
+	"luau-lsp.inlayHints.parameterTypes": true
+}
