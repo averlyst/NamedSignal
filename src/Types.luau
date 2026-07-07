@@ -47,12 +47,6 @@ end
 
 type function SignalFireSignature(signal: type, signature: type, fallback: type): (type)
 	const signatureTag = signature.tag
-
-	-- Handle uninstantiated generics, e.g. from `Signal.new()`
-	if signatureTag == "unknown" or signatureTag == "any" then
-		return fallback
-	end
-
 	if signatureTag ~= "function" then
 		print(`Signal<Signature> expects a 'function' type for \`Signature\`, got '{signatureTag}' type instead.`)
 		return fallback
@@ -71,12 +65,6 @@ end
 
 type function SignalWaitSignature(signal: type, signature: type, fallback: type): (type)
 	const signatureTag = signature.tag
-	
-	-- Handle uninstantiated generics, e.g. from `Signal.new()`
-	if signatureTag == "unknown" or signatureTag == "any" then
-		return fallback
-	end
-
 	if signatureTag ~= "function" then
 		print(`Signal<Signature> expects a 'function' type for \`Signature\`, got '{signatureTag}' type instead.`)
 		return fallback
@@ -87,6 +75,8 @@ type function SignalWaitSignature(signal: type, signature: type, fallback: type)
 		signature:parameters() -- returns
 	)
 end
+
+type LooseSignature = (...any) -> ()
 
 -- Extracts the connection signature from a given RBXScriptSignal if available.
 type function SignatureFromRBXScriptSignal(rbxSignal: type, fallback: type): (type)
@@ -176,7 +166,7 @@ type BaseConnection<Signal, Signature> = {
 	),
 }
 
-export type Connection<Signature = (...any) -> ()> = BaseConnection<Signal<Signature>, Signature>
+export type Connection<Signature = LooseSignature> = BaseConnection<Signal<Signature>, Signature>
 export type GenericConnection<Params...> = BaseConnection<GenericSignal<Params...>, (Params...) -> ()>
 export type InternalConnection = internal<Connection> & {
 	_prev: InternalConnection?,
@@ -259,14 +249,14 @@ type BaseSignal<Signal, Connection, Signature> = {
 	),
 }
 
-export type Signal<Signature = (...any) -> ()> = BaseSignal<Signal<Signature>, Connection<Signature>, Signature> & {
+export type Signal<Signature = LooseSignature> = BaseSignal<Signal<Signature>, Connection<Signature>, Signature> & {
 	-- UDTF-generated Signatures
 	-- Currently, UDTFs do not support self-recursion (impossible to reduce), so we use `any` in place of it for now.
 	-- This still allows the methods to show up in autocomplete, and `self` not being checked is not a huge deal.
-	read Fire: SignalFireSignature<any, Signature, (...any) -> ()>,
-	read FireNow: SignalFireSignature<any, Signature, (...any) -> ()>,
-	read Wait: SignalWaitSignature<any, Signature, (...any) -> ()>,
-	read WaitNow: SignalWaitSignature<any, Signature, (...any) -> ()>,
+	read Fire: SignalFireSignature<any, Signature, LooseSignature>,
+	read FireNow: SignalFireSignature<any, Signature, LooseSignature>,
+	read Wait: SignalWaitSignature<any, Signature, LooseSignature>,
+	read WaitNow: SignalWaitSignature<any, Signature, LooseSignature>,
 }
 
 -- We don't need to use internal UDTF here as there is no read-only public API that we write to.
@@ -308,7 +298,7 @@ export type GenericSignal<Params... = ...any> = BaseSignal<GenericSignal<Params.
 	),
 }
 
-export type WrapSignal<RBXSignal> = Signal<SignatureFromRBXScriptSignal<RBXSignal, (...any) -> ()>>
-export type WrapConnection<RBXSignal> = Connection<SignatureFromRBXScriptSignal<RBXSignal, (...any) -> ()>>
+export type WrapSignal<RBXSignal> = Signal<SignatureFromRBXScriptSignal<RBXSignal, LooseSignature>>
+export type WrapConnection<RBXSignal> = Connection<SignatureFromRBXScriptSignal<RBXSignal, LooseSignature>>
 
 return nil

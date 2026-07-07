@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.1.3
+	v2.1.4
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -583,10 +583,14 @@ end
 -- Interface --
 const NamedSignal = {}
 
+type function unknownFallback(ty: type, fallback: type): (type)
+	return if ty.tag == "unknown" then fallback else ty
+end
+
 --[[
 	Returns a new <code>Signal</code>.
 ]]
-function NamedSignal.new<Signature>(): (Signal<Signature>)
+function NamedSignal.new<Signature>(): (Signal<unknownFallback<Signature, (...any) -> ()>>)
 	return setmetatable({
 		_mutations = {},
 	}, Signal) :: any
