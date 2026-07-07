@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.4] - 2026-07-07
+
+### Fixes
+
+- Uninstantiated generic from `Signal.new()` is now handled properly. Previously, the signature was not being sanitized in all cases.
+
 ## [2.1.3] - 2026-06-24
 
 Hello again, this release is mostly just some codebase maintenance and cleaning up.
