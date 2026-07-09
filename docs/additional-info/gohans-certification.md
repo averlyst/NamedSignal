@@ -8,7 +8,7 @@ Prior to v2.0.0, NamedSignal was a Class 3 signal, however I have slightly devia
 
 Specifically, the **certification expects the re-entrant thread calling fire to yield** until all prior events are completed. This is **inconsistent with all other methods**, as connection and disconnection does not yield, and also introduces a potentially dealbreaking limitation — you **cannot use re-entrant fire in unyieldable environments**, commonly seen in metamethods.
 
-This is where NamedSignal v2.0.0 and onwards diverges from the certification, it also **queues firing, but without yielding**, thus making all methods consistently non-yielding. In a re-entrant fire, the variadic parameters are stored in a new thread that immediately yields, and upon resumption returns the parameters. This gets around the 7999 parameter limit of `unpack`, and also avoids the construction of very large arrays.
+This is where NamedSignal v2.0.0 and onwards diverges from the certification, it also **queues firing, but without yielding**, thus making all methods consistently non-yielding.
 
 ## Results
 
