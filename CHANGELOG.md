@@ -132,15 +132,15 @@ Bumped version to major 1 in accordance with Semantic Versioning 2.0,0, indicati
 
 Initial release of NamedSignal
 
-[2.1.4]: https://github.com/averlyst/NamedSignal/compare/v2.1.4...v2.1.3
-[2.1.3]: https://github.com/averlyst/NamedSignal/compare/v2.1.3...v2.1.2
+[2.1.4]: https://github.com/averlyst/NamedSignal/compare/v2.1.3...v2.1.4
+[2.1.3]: https://github.com/averlyst/NamedSignal/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/averlyst/NamedSignal/compare/v2.1.1...v2.1.2
-[2.1.1]: https://github.com/averlyst/NamedSignal/compare/v2.1.1...v2.1.0
-[2.1.0]: https://github.com/averlyst/NamedSignal/compare/v2.1.0...v2.0.4
-[2.0.4]: https://github.com/averlyst/NamedSignal/compare/v2.0.4...v2.0.0
-[2.0.0]: https://github.com/averlyst/NamedSignal/compare/v2.0.0...v1.2.1
-[1.2.1]: https://github.com/averlyst/NamedSignal/compare/v1.2.1...v1.2.0
-[1.2.0]: https://github.com/averlyst/NamedSignal/compare/v1.2.0...v1.1.0
-[1.1.0]: https://github.com/averlyst/NamedSignal/compare/v1.1.0...v1.0.0
-[1.0.0]: https://github.com/averlyst/NamedSignal/compare/v1.0.0...v0.1.0
+[2.1.1]: https://github.com/averlyst/NamedSignal/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/averlyst/NamedSignal/compare/v2.0.4...v2.1.0
+[2.0.4]: https://github.com/averlyst/NamedSignal/compare/v2.0.0...v2.0.4
+[2.0.0]: https://github.com/averlyst/NamedSignal/compare/v1.2.1...v2.0.0
+[1.2.1]: https://github.com/averlyst/NamedSignal/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/averlyst/NamedSignal/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/averlyst/NamedSignal/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/averlyst/NamedSignal/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/averlyst/NamedSignal/releases/tag/v0.1.0
