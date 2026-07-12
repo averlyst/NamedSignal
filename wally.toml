@@ -1,7 +1,7 @@
 [package]
 name = "nowoshire/namedsignal"
 description = "A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features."
-version = "2.1.5"
+version = "2.1.6"
 license = "MIT"
 authors = ["averlyst"]
 

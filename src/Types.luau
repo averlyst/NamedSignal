@@ -76,8 +76,6 @@ type function SignalWaitSignature(signal: type, signature: type, fallback: type)
 	)
 end
 
-type LooseSignature = (...any) -> ()
-
 -- Extracts the connection signature from a given RBXScriptSignal if available.
 type function SignatureFromRBXScriptSignal(rbxSignal: type, fallback: type): (type)
 	const rbxSignalTag = rbxSignal.tag
@@ -175,6 +173,8 @@ export type InternalConnection = internal<Connection> & {
 }
 
 -- Signal Types --
+export type LooseSignature = (...any) -> ()
+
 export type SignalMutation = {
 	f: ((InternalSignal | InternalConnection | thread, InternalSignal?) -> ())?, -- for any mutation that isn't fire
 	c: InternalConnection?, -- for connection operations
