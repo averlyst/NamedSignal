@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.1.4
+	v2.1.5
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -458,11 +458,15 @@ end
 Signal.Connect = signalConnect
 Signal.ConnectNow = newLinkedConnection
 
+-- Once connections must only be unlinked after running the listener, otherwise we can run into iterator invalidation,
+-- where immediate-mode 'Now' connections get missed in the dispatch cycle.
+
 const function signalOnce(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	local connection: InternalConnection
 	connection = signalConnect(signal, function(...: any): ()
+		const thread = getAvailableThread()
+		resumeListener(thread, thread, func, ...)
 		unlinkConnection(connection :: InternalConnection, signal)
-		func(...)
 	end)
 
 	return connection
@@ -471,8 +475,9 @@ end
 const function signalOnceNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	local connection: InternalConnection
 	connection = newLinkedConnection(signal, function(...: any): ()
+		const thread = getAvailableThread()
+		resumeListener(thread, thread, func, ...)
 		unlinkConnection(connection :: InternalConnection, signal)
-		func(...)
 	end)
 
 	return connection
