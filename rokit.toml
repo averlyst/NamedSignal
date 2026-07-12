@@ -5,7 +5,7 @@
 
 [tools]
 wally = "UpliftGames/wally@0.3.2"
-rojo = "rojo-rbx/rojo@7.7.0-rc.1"
+rojo = "rojo-rbx/rojo@7.7.0"
 luau-lsp = "JohnnyMorganz/luau-lsp@1.68.1"
 wally-package-types = "JohnnyMorganz/wally-package-types@1.6.2"
 StyLua = "JohnnyMorganz/StyLua@2.5.2"
