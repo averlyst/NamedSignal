@@ -9,7 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.1.6] - 2026-07-12
+## [2.1.7] - 2026-07-12
+
+### Fixed
+
+- Changed the approach on how we handled the iterator invalidation bug where immediate-mode 'Now' connections made within Once connections were missed in the same dispatch cycle.
+  - This fixes the behavior of `FireNow` in such cases.
+- Fixed the `Connection` type not having the default signature in the exported public type.
+
+## [2.1.6] - 2026-07-12 [YANKED]
 
 ### Fixed
 
@@ -145,6 +153,7 @@ Bumped version to major 1 in accordance with Semantic Versioning 2.0,0, indicati
 
 Initial release of NamedSignal
 
+[2.1.7]: https://github.com/averlyst/NamedSignal/compare/v2.1.6...v2.1.7
 [2.1.6]: https://github.com/averlyst/NamedSignal/compare/v2.1.5...v2.1.6
 [2.1.5]: https://github.com/averlyst/NamedSignal/compare/v2.1.4...v2.1.5
 [2.1.4]: https://github.com/averlyst/NamedSignal/compare/v2.1.3...v2.1.4
