@@ -212,7 +212,7 @@ end
 const Connection = {}
 Connection.__index = Connection
 
-export type Connection<Signature> = Types.Connection<Signature>
+export type Connection<Signature = Types.LooseSignature> = Types.Connection<Signature>
 export type GenericConnection<Params...> = Types.GenericConnection<Params...>
 type InternalConnection = Types.InternalConnection
 
@@ -307,7 +307,7 @@ const Signal = {}
 Signal.__index = Signal
 
 -- The UDTF generated signal type.
-export type Signal<Signature = (...any) -> ()> = Types.Signal<Signature>
+export type Signal<Signature = Types.LooseSignature> = Types.Signal<Signature>
 
 -- A generics-only alternative as a workaround for types that UDTFs can't serialize, or for compatibility with other signal implementations.
 export type GenericSignal<Params...> = Types.GenericSignal<Params...>
@@ -458,15 +458,11 @@ end
 Signal.Connect = signalConnect
 Signal.ConnectNow = newLinkedConnection
 
--- Once connections must only be unlinked after running the listener, otherwise we can run into iterator invalidation,
--- where immediate-mode 'Now' connections get missed in the dispatch cycle.
-
 const function signalOnce(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	local connection: InternalConnection
 	connection = signalConnect(signal, function(...: any): ()
-		const thread = getAvailableThread()
-		resumeListener(thread, thread, func, ...)
 		unlinkConnection(connection :: InternalConnection, signal)
+		func(...)
 	end)
 
 	return connection
@@ -475,9 +471,8 @@ end
 const function signalOnceNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	local connection: InternalConnection
 	connection = newLinkedConnection(signal, function(...: any): ()
-		const thread = getAvailableThread()
-		resumeListener(thread, thread, func, ...)
 		unlinkConnection(connection :: InternalConnection, signal)
+		func(...)
 	end)
 
 	return connection
@@ -523,9 +518,12 @@ end
 const function processDispatch(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any): ()
 	local connection = signal._head
 	while connection do
+		-- We store a reference to the next connection now before the listener runs to avoid an iterator invalidation
+		-- edge case with immediate 'Now' connections made within Once connections.
+		const nextConnection = connection._next
 		const thread = getAvailableThread()
 		resumeListener(thread, thread, connection.Callback, ...)
-		connection = connection._next
+		connection = nextConnection
 	end
 
 	-- Apply first-level mutations.
@@ -595,7 +593,7 @@ end
 --[[
 	Returns a new <code>Signal</code>.
 ]]
-function NamedSignal.new<Signature>(): (Signal<unknownFallback<Signature, (...any) -> ()>>)
+function NamedSignal.new<Signature>(): (Signal<unknownFallback<Signature, Types.LooseSignature>>)
 	return setmetatable({
 		_mutations = {},
 	}, Signal) :: any
