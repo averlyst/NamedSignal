@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.1.5
+	v2.1.7
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -224,7 +224,7 @@ const function linkConnection(connection: InternalConnection, signal: InternalSi
 	connection.Connected = true
 
 	const tail = signal._tail
-
+	
 	-- Link the connection to the tail connection if it exists
 	if tail then
 		tail._next = connection
@@ -430,6 +430,15 @@ const function newLinkedConnection(signal: InternalSignal, func: (...any) -> ())
 	if tail then
 		tail._next = connection
 	else
+		-- A onceTail exists when a Once connection was the signal tail at the time of its invocation.
+		const onceTail = signal._onceTail
+		if onceTail then
+			-- In order to prevent iterator invalidation in certain edge cases, we need to point it to this connection,
+			-- so that an active dispatch can iterate forwards off the node without interruption.
+			onceTail._next = connection
+			signal._onceTail = nil
+		end
+		
 		signal._head = connection
 	end
 
@@ -458,10 +467,35 @@ end
 Signal.Connect = signalConnect
 Signal.ConnectNow = newLinkedConnection
 
+--[[
+	A variant of <code>unlinkConnection<code> used for Once connections.
+]]
+const function unlinkOnce(connection: InternalConnection, signal: InternalSignal)
+	if not connection.Connected then return end
+	connection.Connected = false
+
+	-- Bridge gaps, set prev next to this one's next and vice versa.
+	-- Do NOT clear pointers, as it can cause iterator invalidation.
+	const prv, nxt = connection._prev, connection._next
+
+	if prv then
+		prv._next = nxt
+	else -- This was the first link in the list, set head to next
+		signal._head = nxt
+	end
+
+	if nxt then
+		nxt._prev = prv
+	else -- This was the last link in the list, set tail to previous
+		signal._tail = prv
+		signal._onceTail = connection -- set onceTail so new connections have something to go off of.
+	end
+end
+
 const function signalOnce(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	local connection: InternalConnection
 	connection = signalConnect(signal, function(...: any): ()
-		unlinkConnection(connection :: InternalConnection, signal)
+		unlinkOnce(connection :: InternalConnection, signal)
 		func(...)
 	end)
 
@@ -471,7 +505,7 @@ end
 const function signalOnceNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	local connection: InternalConnection
 	connection = newLinkedConnection(signal, function(...: any): ()
-		unlinkConnection(connection :: InternalConnection, signal)
+		unlinkOnce(connection :: InternalConnection, signal)
 		func(...)
 	end)
 
@@ -518,12 +552,9 @@ end
 const function processDispatch(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any): ()
 	local connection = signal._head
 	while connection do
-		-- We store a reference to the next connection now before the listener runs to avoid an iterator invalidation
-		-- edge case with immediate 'Now' connections made within Once connections.
-		const nextConnection = connection._next
 		const thread = getAvailableThread()
 		resumeListener(thread, thread, connection.Callback, ...)
-		connection = nextConnection
+		connection = connection._next
 	end
 
 	-- Apply first-level mutations.
