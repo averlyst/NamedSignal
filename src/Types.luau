@@ -267,7 +267,11 @@ export type InternalSignal = Signal & {
 	_mutations: {
 		{SignalMutation} -- [re-entrancy depth]: ...
 	},
-	_wrapConnection: RBXScriptConnection?
+	_wrapConnection: RBXScriptConnection?,
+	
+	-- This is when a once connection is the tail of a signal, for fixing an iterator invalidation edge case.
+	-- A bit of an ugly solution, but I couldn't come up with a better one. Please create an issue or PR if you know of a better way.
+	_onceTail: InternalConnection?,
 }
 
 export type GenericSignal<Params... = ...any> = BaseSignal<GenericSignal<Params...>, GenericConnection<Params...>, (Params...) -> ()> & {
