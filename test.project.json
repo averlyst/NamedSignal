@@ -1,0 +1,17 @@
+{
+	"name": "NamedSignal Test",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+
+			"Modules": {
+				"$className": "Folder",
+
+				"NamedSignal": {
+					"$path": "src"
+				}
+			}
+		}
+	}
+}

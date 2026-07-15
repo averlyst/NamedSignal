@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.2.0-rc.1
+	v2.2.0-rc.2
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -476,8 +476,12 @@ function Signal.DisconnectAllNow(self: InternalSignal): ()
 		breakConnectionList(self)
 		removePreservedTailNext(self)
 		self._head = nil
-		self._pTail = self._tail
-		self._tail = nil
+
+		const tail = self._tail
+		if tail then
+			self._pTail = tail
+			self._tail = nil
+		end
 	else
 		disconnectAll(self)
 	end
@@ -631,7 +635,7 @@ Signal.OnceNow = signalOnceNow
 ]]
 const function safeAwaitSignal(connection: InternalConnection, signal: InternalSignal): (...any)
 	const args = {coroutine.yield()}
-	unlinkConnection(connection, signal) -- Unlink after resuming to account for external resumption
+	unlinkConnectionNow(connection, signal) -- Unlink after resuming to account for external resumption
 	return unpack(args)
 end
 
