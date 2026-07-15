@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed a class of iterator invalidation edge cases involving immediate-mode 'Now' disconnections on the active node if it was the tail connection.
+- Fixed a class of iterator invalidation edge cases involving immediate-mode 'Now' disconnections on the active node.
   - Note: Those who've not used deferred mutation opt-outs were not impacted.
 
 ### Added
