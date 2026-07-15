@@ -162,6 +162,12 @@ type BaseConnection<Signal, Signature> = {
 		]]
 		function(self: BaseConnection<Signal, Signature>): () end
 	),
+	read DestroyNow: typeof(
+		--[[
+			The immediate mode equivalent of <code>Connection:Destroy()</code>.
+		]]
+		function(self: BaseConnection<Signal, Signature>): () end
+	),
 }
 
 export type Connection<Signature = LooseSignature> = BaseConnection<Signal<Signature>, Signature>
@@ -247,6 +253,13 @@ type BaseSignal<Signal, Connection, Signature> = {
 		]]
 		function(self: Signal, func: Signature): (Connection) return nil :: any end
 	),
+
+	read GetConnections: typeof(
+		--[[
+			Returns an array of active <code>Connection</code>s on this <code>Signal</code> ordered from oldest to newest.
+		]]
+		function(self: Signal): ({Connection}) return nil :: any end
+	),
 }
 
 export type Signal<Signature = LooseSignature> = BaseSignal<Signal<Signature>, Connection<Signature>, Signature> & {
@@ -268,10 +281,9 @@ export type InternalSignal = Signal & {
 		{SignalMutation} -- [re-entrancy depth]: ...
 	},
 	_wrapConnection: RBXScriptConnection?,
-	
-	-- This is when a once connection is the tail of a signal, for fixing an iterator invalidation edge case.
-	-- A bit of an ugly solution, but I couldn't come up with a better one. Please create an issue or PR if you know of a better way.
-	_onceTail: InternalConnection?,
+
+	-- Used to preserve iteration when an immediate-mode disconnection happens on tail connection.
+	_pTail: InternalConnection?,
 }
 
 export type GenericSignal<Params... = ...any> = BaseSignal<GenericSignal<Params...>, GenericConnection<Params...>, (Params...) -> ()> & {

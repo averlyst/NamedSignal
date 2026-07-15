@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.1.7
+	v2.2.0-rc.1
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -135,7 +135,7 @@ const function getAvailableThread(): (thread)
 		threadPool[numThreads] = nil -- Remove from free threads
 	end
 
-	-- Fix an edge case where if the cached handler thread is not suspended, the first listener will not run on the next invocation.
+	-- Threads can be closed externally! Check before reuse.
 	if not isThreadResumable(thread) then
 		return spawnThread(eventHandlerRoutine)
 	end
@@ -150,30 +150,30 @@ end
 const resumeListener = task and (
 	if SIGNAL_BEHAVIOR == "Deferred"
 		then task.defer
-	elseif ERROR_INFO_MODE == "Full"
+		elseif ERROR_INFO_MODE == "Full"
 		or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
 		then task.spawn
-	else nil -- Fallback to below
+		else nil -- Fallback to below
 ) or (
 	-- Task library is unavailable or a performance ERROR_INFO_MODE was chosen
 	if ERROR_INFO_MODE == "None"
-		then coroutine.resume
-	else (function(): (thread, ...any) -> () -- "Auto" in production or "Warn" ERROR_INFO_MODE
-		const log = warn or print -- Portability, the environment might not have warn.
+	then coroutine.resume
+	else (function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
+			const log = warn or print -- Portability, the environment might not have warn.
 
-		return function(co: thread, ...: any): ()
-			const success, err = coroutine.resume(co, ...)
-			if success then return end
+			return function(co: thread, ...: any): ()
+				const success, err = coroutine.resume(co, ...)
+				if success then return end
 
-			-- About as close as we can get to normal error semantics, just with some minor styling differences.
-			-- Avoiding tostring conversions to get proper outputs of non-string error messages.
-			log(
-				"Error occurred during invocation:",
-				if err ~= nil then err else "Error occurred, no output from Luau.",
-				debug.traceback(co, "\nStack Begin") .. "Stack End"
-			)
-		end
-	end)()
+				-- About as close as we can get to normal error semantics, just with some minor styling differences.
+				-- Avoiding tostring conversions to get proper outputs of non-string error messages.
+				log(
+					"Error occurred during invocation:",
+					if err ~= nil then err else "Error occurred, no output from Luau.",
+					debug.traceback(co, "\nStack Begin") .. "Stack End"
+				)
+			end
+		end)()
 )
 
 -- Deferred Mutation Helpers --
@@ -217,16 +217,28 @@ export type GenericConnection<Params...> = Types.GenericConnection<Params...>
 type InternalConnection = Types.InternalConnection
 
 --[[
-	Links the connection to the end of the signal.
+	Returns the next node pointer of the preserved tail connection while clearing its reference.
 ]]
-const function linkConnection(connection: InternalConnection, signal: InternalSignal): ()
-	if connection.Connected then return end
-	connection.Connected = true
+const function getPreservedTailNext(signal: InternalSignal): (InternalConnection?)
+	const pTail = signal._pTail
+	if not pTail then return nil end
 
-	const tail = signal._tail
-	
-	-- Link the connection to the tail connection if it exists
-	if tail then
+	signal._pTail = nil
+	return pTail and pTail._next
+end
+
+--[[
+	Removes the next node pointer of the preserved tail connection.
+]]
+const function removePreservedTailNext(signal: InternalSignal): ()
+	const existingPTail = signal._pTail
+	if existingPTail then
+		existingPTail._next = nil
+	end
+end
+
+const function baseLinkConnection(connection: InternalConnection, signal: InternalSignal, tail: InternalConnection?): ()
+	if tail then -- Link the connection to the tail connection if it exists
 		tail._next = connection
 		connection._prev = tail
 	else -- Otherwise, this is the first connection, set signal head to this.
@@ -234,6 +246,50 @@ const function linkConnection(connection: InternalConnection, signal: InternalSi
 	end
 
 	signal._tail = connection
+end
+
+--[[
+	Links the connection to the end of the signal.
+]]
+const function linkConnection(connection: InternalConnection, signal: InternalSignal): ()
+	if connection.Connected then return end
+	connection.Connected = true
+
+	baseLinkConnection(connection, signal, signal._tail)
+end
+
+--[[
+	A variant of <code>linkConnection</code> that handles iterator invalidation edge cases.
+]]
+const function linkConnectionNow(connection: InternalConnection, signal: InternalSignal): ()
+	if connection.Connected then return end
+	connection.Connected = true
+
+	local tail = signal._tail
+	if tail then
+		baseLinkConnection(connection, signal, tail)
+	else
+		tail = signal._pTail
+		if tail then
+			if not tail._prev then
+				signal._head = connection
+			end
+			
+			tail._next = connection
+		elseif not connection._prev then
+			signal._head = connection
+		end
+
+		signal._tail = connection
+	end
+end
+
+const function baseUnlinkConnection(prv: InternalConnection?, nxt: InternalConnection?, signal: InternalSignal): ()
+	if prv then
+		prv._next = nxt
+	else -- This was the first link in the list, set head to next
+		signal._head = nxt
+	end
 end
 
 --[[
@@ -247,11 +303,7 @@ const function unlinkConnection(connection: InternalConnection, signal: Internal
 	-- Do NOT clear pointers, as it can cause iterator invalidation.
 	const prv, nxt = connection._prev, connection._next
 
-	if prv then
-		prv._next = nxt
-	else -- This was the first link in the list, set head to next
-		signal._head = nxt
-	end
+	baseUnlinkConnection(prv, nxt, signal)
 
 	if nxt then
 		nxt._prev = prv
@@ -260,61 +312,112 @@ const function unlinkConnection(connection: InternalConnection, signal: Internal
 	end
 end
 
+--[[
+	A variant of <code>unlinkConnection</code> that handles iterator invalidation edge cases.
+]]
+const function unlinkConnectionNow(connection: InternalConnection, signal: InternalSignal): ()
+	if not connection.Connected then return end
+	connection.Connected = false
+	
+	-- Bridge gaps, set prev next to this one's next and vice versa.
+	-- Do NOT clear pointers, as it can cause iterator invalidation.
+	const prv, nxt = connection._prev, connection._next
+
+	baseUnlinkConnection(prv, nxt, signal)
+
+	if nxt then
+		nxt._prev = prv
+	else -- This was the last link in the list, set tail to previous
+		if not prv then
+			removePreservedTailNext(signal)
+			signal._pTail = connection
+		end
+		
+		signal._tail = prv
+	end
+end
+
 function Connection.Disconnect(self: InternalConnection): ()
 	const signal = self.Signal
 	if signal._firing then
 		enqueueMutation(signal._mutations, {
-			f = unlinkConnection :: any,
-			c = self
+			f = unlinkConnection :: any, c = self
 		})
-		return
+	else
+		unlinkConnection(self, signal)
 	end
-
-	unlinkConnection(self, signal)
 end
 
 function Connection.DisconnectNow(self: InternalConnection): ()
-	unlinkConnection(self, self.Signal)
+	const signal = self.Signal
+	if signal._firing then
+		unlinkConnectionNow(self, signal)
+	else
+		unlinkConnection(self, signal)
+	end
 end
 
 function Connection.Reconnect(self: InternalConnection): ()
 	const signal = self.Signal
 	if signal._firing then
 		enqueueMutation(signal._mutations, {
-			f = linkConnection :: any,
-			c = self,
+			f = linkConnection :: any, c = self,
 		})
-		return
+	else
+		linkConnection(self, signal)
 	end
-
-	linkConnection(self, signal)
 end
 
 function Connection.ReconnectNow(self: InternalConnection): ()
-	linkConnection(self, self.Signal)
+	const signal = self.Signal
+	if signal._firing then
+		linkConnectionNow(self, self.Signal)
+	else
+		linkConnection(self, signal)
+	end
 end
 
--- No "-Now" variation is provided for `Connection:Destroy()`, as that would cause issues with deferred mutations.
+const function destroyConnection(connection: InternalConnection): ()
+	unlinkConnection(connection, connection.Signal)
+	table.clear(connection)
+	setmetatable(connection, nil)
+end
 
 function Connection.Destroy(self: InternalConnection): ()
-	unlinkConnection(self, self.Signal)
-	table.clear(self)
-	setmetatable(self, nil)
+	const signal = self.Signal
+	if signal._firing then
+		enqueueMutation(signal._mutations, {
+			f = destroyConnection :: any, c = self
+		})
+	else
+		destroyConnection(self)
+	end
+end
+
+function Connection.DestroyNow(self: InternalConnection): ()
+	const signal = self.Signal
+	if signal._firing then
+		unlinkConnectionNow(self, signal)
+
+		-- We can't clear the table now, as it may be the active node and cause iterator invalidation.
+		-- Schedule it to be cleared after dispatch.
+		enqueueMutation(signal._mutations, {
+			f = table.clear :: any, c = self
+		})
+
+		setmetatable(self, nil)
+	else
+		destroyConnection(self, signal)
+	end
 end
 
 -- Signal Class --
 const Signal = {}
 Signal.__index = Signal
 
--- The UDTF generated signal type.
 export type Signal<Signature = Types.LooseSignature> = Types.Signal<Signature>
-
--- A generics-only alternative as a workaround for types that UDTFs can't serialize, or for compatibility with other signal implementations.
 export type GenericSignal<Params...> = Types.GenericSignal<Params...>
-
--- A signal that is wrapped around an RBXScriptSignal, infers signature from it if available.
 export type WrapSignal<RBXSignal> = Types.WrapSignal<RBXSignal>
-
 type InternalSignal = Types.InternalSignal
 
 const function cancelAllMutations(self: InternalSignal): ()
@@ -333,30 +436,13 @@ end
 
 Signal.CancelAllMutations = cancelAllMutations
 
---[[
-	Disconnects all connections from the signal.
-]]
-const function baseDisconnectAll(signal: InternalSignal): ()
+const function disconnectAll(signal: InternalSignal): ()
 	local connection = signal._head
 	while connection do
 		connection.Connected = false
 		connection = connection._next -- Iterate
 	end
-end
 
---[[
-	Disconnects all connections from the signal, but also sets _next to nil to interrupt dispatch.
-]]
-const function baseDisconnectAllInterrupt(signal: InternalSignal): ()
-	local connection = signal._head
-	while connection do
-		connection.Connected = false
-		connection._next, connection = nil, connection._next -- Remove _next and iterate
-	end
-end
-
-const function disconnectAll(signal: InternalSignal): ()
-	baseDisconnectAll(signal)
 	signal._head = nil
 	signal._tail = nil
 end
@@ -366,26 +452,45 @@ function Signal.DisconnectAll(self: InternalSignal): ()
 		enqueueMutation(self._mutations, {
 			f = disconnectAll :: any
 		})
-		return
+	else
+		disconnectAll(self)
 	end
+end
 
-	disconnectAll(self)
+--[[
+	Disconnects all connections from the signal.
+	
+	Doesn't clear _head and _tail.
+	Sets _next to nil to intentionally interrupt dispatch.
+]]
+const function breakConnectionList(signal: InternalSignal): ()
+	local connection = signal._head
+	while connection do
+		connection.Connected = false
+		connection._next, connection = nil, connection._next -- Remove _next and iterate
+	end
 end
 
 function Signal.DisconnectAllNow(self: InternalSignal): ()
-	baseDisconnectAllInterrupt(self)
-	self._head = nil
-	self._tail = nil	
+	if self._firing then
+		breakConnectionList(self)
+		removePreservedTailNext(self)
+		self._head = nil
+		self._pTail = self._tail
+		self._tail = nil
+	else
+		disconnectAll(self)
+	end
 end
 
-const function destroy(signal: InternalSignal): ()
+const function destroySignal(signal: InternalSignal): ()
 	const wrapConnection = signal._wrapConnection
 	if wrapConnection then
 		wrapConnection:Disconnect()
 	end
 
 	cancelAllMutations(signal)
-	baseDisconnectAll(signal)
+	breakConnectionList(signal)
 
 	table.clear(signal)
 	setmetatable(signal, nil)
@@ -394,18 +499,17 @@ end
 function Signal.Destroy(self: InternalSignal): ()
 	if self._firing then
 		enqueueMutation(self._mutations, {
-			f = destroy :: any
+			f = destroySignal :: any
 		})
-		return
+	else
+		destroySignal(self)
 	end
-
-	destroy(self)
 end
 
-Signal.DestroyNow = destroy
+Signal.DestroyNow = destroySignal
 
 --[[
-	Returns a new unlinked Connection, used during deferred connections where it's not immediately connected.
+	Returns a new unlinked Connection, used for deferred connections that are scheduled to connect at a later time.
 ]]
 const function newUnlinkedConnection(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	return setmetatable({
@@ -430,19 +534,39 @@ const function newLinkedConnection(signal: InternalSignal, func: (...any) -> ())
 	if tail then
 		tail._next = connection
 	else
-		-- A onceTail exists when a Once connection was the signal tail at the time of its invocation.
-		const onceTail = signal._onceTail
-		if onceTail then
-			-- In order to prevent iterator invalidation in certain edge cases, we need to point it to this connection,
-			-- so that an active dispatch can iterate forwards off the node without interruption.
-			onceTail._next = connection
-			signal._onceTail = nil
-		end
-		
 		signal._head = connection
 	end
 
 	signal._tail = connection
+
+	return connection
+end
+
+--[[
+	A variant of <code>newLinkedConnection</code> that handles iterator invalidation edge cases.
+]]
+const function newLinkedConnectionNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+	local tail = signal._tail
+	const connection: InternalConnection = setmetatable({
+		Connected = true,
+		Callback = func,
+		Signal = signal,
+		_prev = tail,
+	}, Connection) :: any
+
+	if tail then
+		tail._next = connection
+	else
+		tail = signal._pTail
+		signal._head = connection
+		
+		if tail then
+			tail._next = connection
+		end
+	end
+
+	signal._tail = connection
+
 	return connection
 end
 
@@ -454,48 +578,35 @@ const function signalConnect(signal: InternalSignal, func: (...any) -> ()): (Int
 	if signal._firing then
 		const unlinked = newUnlinkedConnection(signal, func)
 		enqueueMutation(signal._mutations, {
-			f = linkConnection :: any,
-			c = unlinked
+			f = linkConnection :: any, c = unlinked
 		})
 
 		return unlinked
+	else
+		return newLinkedConnection(signal, func)
 	end
+end
 
-	return newLinkedConnection(signal, func)
+--[[
+	A variant of <code>linkCsignalConnectonnection</code> that handles iterator invalidation edge cases.
+]]
+const function signalConnectNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+	if signal._firing then
+		return newLinkedConnectionNow(signal, func)
+	else
+		return newLinkedConnection(signal, func)
+	end
 end
 
 Signal.Connect = signalConnect
-Signal.ConnectNow = newLinkedConnection
-
---[[
-	A variant of <code>unlinkConnection<code> used for Once connections.
-]]
-const function unlinkOnce(connection: InternalConnection, signal: InternalSignal)
-	if not connection.Connected then return end
-	connection.Connected = false
-
-	-- Bridge gaps, set prev next to this one's next and vice versa.
-	-- Do NOT clear pointers, as it can cause iterator invalidation.
-	const prv, nxt = connection._prev, connection._next
-
-	if prv then
-		prv._next = nxt
-	else -- This was the first link in the list, set head to next
-		signal._head = nxt
-	end
-
-	if nxt then
-		nxt._prev = prv
-	else -- This was the last link in the list, set tail to previous
-		signal._tail = prv
-		signal._onceTail = connection -- set onceTail so new connections have something to go off of.
-	end
-end
+Signal.ConnectNow = signalConnectNow
 
 const function signalOnce(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	local connection: InternalConnection
 	connection = signalConnect(signal, function(...: any): ()
-		unlinkOnce(connection :: InternalConnection, signal)
+		-- Even though this is not the immediate-mode method, we still use unlinkConnectionNow, as the disconnection
+		-- happens during dispatch-time (it's effectively equivalent to DisconnectNow).
+		unlinkConnectionNow(connection :: InternalConnection, signal)
 		func(...)
 	end)
 
@@ -504,8 +615,8 @@ end
 
 const function signalOnceNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	local connection: InternalConnection
-	connection = newLinkedConnection(signal, function(...: any): ()
-		unlinkOnce(connection :: InternalConnection, signal)
+	connection = signalConnectNow(signal, function(...: any): ()
+		unlinkConnectionNow(connection :: InternalConnection, signal)
 		func(...)
 	end)
 
@@ -525,8 +636,7 @@ const function safeAwaitSignal(connection: InternalConnection, signal: InternalS
 end
 
 const function resumeAwaiting(thread: thread, ...: any): ()
-	-- Check that it is resumable to avoid nuisance errors.
-	-- Not ideal but we don't have access to any information that would allow automatic cleanup.
+	-- Check that the thread is resumable to avoid nuisance errors.
 	if isThreadResumable(thread) then
 		resumeListener(thread, ...)
 	end
@@ -554,12 +664,15 @@ const function processDispatch(signal: InternalSignal, mutationList: {{Types.Sig
 	while connection do
 		const thread = getAvailableThread()
 		resumeListener(thread, thread, connection.Callback, ...)
-		connection = connection._next
+
+		-- Iterate to the next connection, either from this node, or from the preserve tail in case of immediate-mode
+		-- DisconnectAllNow operations.
+		connection = connection._next or getPreservedTailNext(signal)
 	end
 
 	-- Apply first-level mutations.
-	-- While table.remove would return the firstMutations array if it exists, the majority of use cases will
-	-- see no mutations, so it would generally be more performant to index first, then call `table.remove`.
+	-- While table.remove would return the firstMutations array if it exists, the majority of use cases will see no
+	-- mutations, so it would generally be more performant to index first, then call `table.remove`.
 	const firstMutations = mutationList[1]
 	if not firstMutations then return end
 
@@ -585,26 +698,24 @@ end
 
 function Signal.Fire(self: InternalSignal, ...: any): ()
 	const mutations = self._mutations
-
 	if self._firing then
 		enqueueMutationLevel(mutations, {
 			a = {...}
 		})
-		return
+	else
+		self._firing = true
+		processDispatch(self, mutations, ...)
+
+		-- Only the first non-reentrant fire is not queued, and as it's "blocking" we can safely clear _firing
+		-- unconditionally since all other operations will have completed during invocation.
+		self._firing = nil
 	end
-
-	self._firing = true
-	processDispatch(self, mutations, ...)
-
-	-- Only the first non-reentrant fire is not queued, and as it's "blocking" we can safely clear _firing unconditionally
-	-- since all other operations will have completed during invocation.
-	self._firing = nil
 end
 
 function Signal.FireNow(self: InternalSignal, ...: any): ()
-	const mutations = self._mutations
-
 	self._firing = true
+
+	const mutations = self._mutations
 	processDispatch(self, mutations, ...)
 
 	-- FireNow cannot unconditionally clear _firing because it skips re-entrancy, and as such can return before other
@@ -612,6 +723,17 @@ function Signal.FireNow(self: InternalSignal, ...: any): ()
 	if not mutations[1] then
 		self._firing = nil
 	end
+end
+
+function Signal.GetConnections(self: InternalSignal): ({Connection})
+	const connectionList: {Connection} = {}
+	local connection = self._head
+	while connection do
+		table.insert(connectionList, connection)
+		connection = connection._next
+	end
+
+	return connectionList
 end
 
 -- Interface --

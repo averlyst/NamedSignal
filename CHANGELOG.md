@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0-rc.1] - 2026-07-14
+
+### Fixed
+
+- Fixed a class of iterator invalidation edge cases involving immediate-mode 'Now' disconnections on the active node if it was the tail connection.
+  - Note: Those who've not used deferred mutation opt-outs were not impacted.
+
+### Added
+
+- Added new method `Signal:GetConnections()`, which returns an array of active connections on the signal, ordered from oldest to newest.
+- `Connection:DestroyNow()` is now supported.
+
 ## [2.1.7] - 2026-07-12
 
 ### Fixed
@@ -153,6 +165,7 @@ Bumped version to major 1 in accordance with Semantic Versioning 2.0,0, indicati
 
 Initial release of NamedSignal
 
+[2.2.0-rc.1]: https://github.com/averlyst/NamedSignal/compare/v2.1.7...v2.2.0-rc.1
 [2.1.7]: https://github.com/averlyst/NamedSignal/compare/v2.1.6...v2.1.7
 [2.1.6]: https://github.com/averlyst/NamedSignal/compare/v2.1.5...v2.1.6
 [2.1.5]: https://github.com/averlyst/NamedSignal/compare/v2.1.4...v2.1.5
