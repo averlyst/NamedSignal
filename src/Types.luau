@@ -278,11 +278,12 @@ export type InternalSignal = Signal & {
 	_tail: InternalConnection?,
 	_firing: true?,
 	_mutations: {
-		{SignalMutation} -- [re-entrancy depth]: ...
+		-- [mutation depth]: {...}
+		[number]: {SignalMutation}
 	},
 	_wrapConnection: RBXScriptConnection?,
 
-	-- Used to preserve iteration when an immediate-mode disconnection happens on tail connection.
+	-- Used to preserve iteration when an immediate-mode disconnection happens.
 	_pTail: InternalConnection?,
 }
 
