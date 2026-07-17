@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.2.0-rc.2
+	v2.2.0
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -150,15 +150,16 @@ end
 const resumeListener = task and (
 	if SIGNAL_BEHAVIOR == "Deferred"
 		then task.defer
-		elseif ERROR_INFO_MODE == "Full"
+	elseif ERROR_INFO_MODE == "Full"
 		or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
 		then task.spawn
-		else nil -- Fallback to below
+	else nil -- Fallback to below
 ) or (
 	-- Task library is unavailable or a performance ERROR_INFO_MODE was chosen
 	if ERROR_INFO_MODE == "None"
-	then coroutine.resume
-	else (function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
+		then coroutine.resume
+	else (
+		function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
 			const log = warn or print -- Portability, the environment might not have warn.
 
 			return function(co: thread, ...: any): ()
@@ -173,7 +174,8 @@ const resumeListener = task and (
 					debug.traceback(co, "\nStack Begin") .. "Stack End"
 				)
 			end
-		end)()
+		end
+	)()
 )
 
 -- Deferred Mutation Helpers --
@@ -419,6 +421,17 @@ export type Signal<Signature = Types.LooseSignature> = Types.Signal<Signature>
 export type GenericSignal<Params...> = Types.GenericSignal<Params...>
 export type WrapSignal<RBXSignal> = Types.WrapSignal<RBXSignal>
 type InternalSignal = Types.InternalSignal
+
+function Signal.GetConnections(self: InternalSignal): ({Connection})
+	const connectionList: {Connection} = {}
+	local connection = self._head
+	while connection do
+		table.insert(connectionList, connection)
+		connection = connection._next -- We don't need to account for pTails as we don't dispatch any listeners here.
+	end
+
+	return connectionList
+end
 
 const function cancelAllMutations(self: InternalSignal): ()
 	if not self._firing then return end
@@ -727,17 +740,6 @@ function Signal.FireNow(self: InternalSignal, ...: any): ()
 	if not mutations[1] then
 		self._firing = nil
 	end
-end
-
-function Signal.GetConnections(self: InternalSignal): ({Connection})
-	const connectionList: {Connection} = {}
-	local connection = self._head
-	while connection do
-		table.insert(connectionList, connection)
-		connection = connection._next
-	end
-
-	return connectionList
 end
 
 -- Interface --
