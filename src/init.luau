@@ -605,7 +605,7 @@ const function signalConnect(signal: InternalSignal, func: (...any) -> ()): (Int
 end
 
 --[[
-	A variant of <code>linkCsignalConnectonnection</code> that handles iterator invalidation edge cases.
+	A variant of <code>signalConnect</code> that handles iterator invalidation edge cases.
 ]]
 const function signalConnectNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	if signal._firing then
