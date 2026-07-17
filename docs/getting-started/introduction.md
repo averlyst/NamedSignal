@@ -22,6 +22,8 @@ The API mirrors common standard and extended Signal APIs, with additional qualit
 
 See how NamedSignal compares to alternatives!
 
+<!--Vs Roblox BindableEvent-->
+
 ::: details <h3>vs. BindableEvents</h3> {#vs-bindableevents}
 
 The [`BindableEvent`](https://create.roblox.com/docs/reference/engine/classes/BindableEvent) is the engine's implemention of the event emitter pattern, providing access to creating [`RBXScriptSignal`](https://create.roblox.com/docs/en-us/reference/engine/datatypes/RBXScriptSignal) and [`RBXScriptConnection`](https://create.roblox.com/docs/en-us/reference/engine/datatypes/RBXScriptConnection) objects.
@@ -104,11 +106,13 @@ If you want numbers anyway, in a 'reasonable' scenario: 5 connections, an array 
 
 :::
 
+<!--Vs stravant GoodSignal, sleitnick RbxUtil Signal-->
+
 ::: details <h3>vs. [GoodSignal](https://github.com/stravant/goodsignal/tree/master)/[RbxUtil Signal](https://sleitnick.github.io/RbxUtil/api/Signal/)</h3> {#vs-goodsignal-rbxutilsignal}
 
 GoodSignal by stravant is the de facto standard of Roblox signal modules, with sleitnick's RbxUtil fork being an extension of it.
 
-As sleitnick's fork is directly based on GoodSignal, just with some added methods and types, **comparisons are made with RbxUtil's fork** instead to avoid redundancy.
+As sleitnick's fork is directly based on GoodSignal, just with some added methods and types, **comparisons are made with RbxUtil's fork** instead for simplicity.
 
 <table>
 	<thead>
@@ -172,6 +176,8 @@ As sleitnick's fork is directly based on GoodSignal, just with some added method
 </small>
 
 :::
+
+<!--Vs FastSignal, Signal+-->
 
 ::: details <h3>vs. [FastSignal](https://rblxutils.github.io/FastSignal/)/[Signal+](https://alexxander.gitbook.io/signalplus)</h3> {#vs-fastsignal-signalplus}
 
@@ -237,6 +243,8 @@ FastSignal and Signal+ are quite similar signal libraries, with the main differe
 </small>
 
 :::
+
+<!--Vs LemonSignal (v2.0.0)-->
 
 ::: details <h3>vs. [LemonSignal](https://data-oriented-house.github.io/LemonSignal/)</h3> {#vs-lemonsignal}
 
