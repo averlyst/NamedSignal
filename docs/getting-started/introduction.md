@@ -240,11 +240,7 @@ FastSignal and Signal+ are quite similar signal libraries, with the main differe
 
 ::: details <h3>vs. [LemonSignal](https://data-oriented-house.github.io/LemonSignal/)</h3> {#vs-lemonsignal}
 
-LemonSignal is a fairly competent Signal library, featuring the standard and extended signal API, with additional 'Variadic connections', but lacking a bit in typechecking.
-
-It has also fixed the common "cannot spawn non-suspended coroutine" error that affects other libraries by checking cached thread status before reusing.
-
-NamedSignal supports a similar set of APIs, but has chosen to not support the 'Variadic connections' feature.
+LemonSignal is a fairly competent Signal library, featuring the standard and extended signal API of most other libraries.
 
 <table>
 	<thead>
@@ -256,20 +252,11 @@ NamedSignal supports a similar set of APIs, but has chosen to not support the 'V
 		<tr>
 			<td rowspan="2">Type-checking</td>
 			<td><b>Extended Capabilities</b></td>
-			<td><b>No Connection Typing</b></td>
+			<td colspan="2"><b>Standard, Generic Types</b></td>
 		</tr>
 		<tr>
-			<td>Extended type-checking capabilities beyond standard generic types using User Defined Type Functions. Featuring support for parameter naming and automatic inference for <code>Signal.wrap</code>.</td>
-			<td>Due to its 'Variadic connections' feature, typechecking and inferring types for listeners isn't possible, meaning function auto-fill can only provide <code>(...any) -> ()</code>.</td>
-		</tr>
-		<tr>
-			<td rowspan="2">Variadic Connections <small>(Argument Prepending)</small></td>
-			<td><b>❌ Unsupported</b></td>
-			<td><b>✅ Supported</b></td>
-		</tr>
-		<tr>
-			<td>Deliberately chose to not support this for now, as it <b>isn't currently possible to type-check</b>, and would sacrifice function auto-fill. This feature is also quite niche, the alternative is just a new closure with upvalues.</td>
-			<td>Supports variadic connections, but sacrifices the ability to type-check listeners in the process, as two generic packs cannot be used in a single type pack (which extends to function types), they must fallback to <code>(...any) -> ()</code>.</td>
+			<td>Enhanced typing using User Defined Type Functions, featuring support for parameter naming and automatic inference for <code>Signal.wrap</code>.</td>
+			<td colspan="2">Uses the standard generic type packs, which lacks the ability to define parameter names.</td>
 		</tr>
 	</tbody>
 </table>
