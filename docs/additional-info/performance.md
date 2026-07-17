@@ -42,18 +42,18 @@ Benchmarks are a work in progress!
 For now testing uses [Gohan's Certification](./gohans-certification)'s Speed Certification:
 
 ```txt
-⚪ | Speed Certification     |  -  Server - Signal_Certifications:2020
---------------------------------------------------------------------------------------  -  Server - Signal_Certifications:1965
-☑ | Create         | -0.6μs  | Baseline: 0.7μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Connect        | -0.6μs  | Baseline: 0.8μs  ▶ {...} | Results: 0.2μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Once           | -0.5μs  | Baseline: 0.8μs  ▶ {...} | Results: 0.2μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_None      | -0.0μs  | Baseline: 0.1μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_One       | +0.1μs  | Baseline: 0.4μs  ▶ {...} | Results: 0.5μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_Many      | +0.2μs  | Baseline: 0.2μs  ▶ {...} | Results: 0.3μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_OneYield  | -0.1μs  | Baseline: 0.7μs  ▶ {...} | Results: 0.7μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Fire_ManyYield | +0.4μs  | Baseline: 0.1μs  ▶ {...} | Results: 0.6μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | Disconnect     | -0.2μs  | Baseline: 0.3μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:222
-☑ | DisconnectAll  | -7.8μs  | Baseline: 8.9μs  ▶ {...} | Results: 1.1μs  ▶ {...}  -  Server - Signal_Certifications:222
---------------------------------------------------------------------------------------  -  Server - Signal_Certifications:1965
-✅ | Speed Certified         |  -  Server - Signal_Certifications:122
+⚪ | Speed Certification     |  -  Server - Signal_Certifications:2023
+--------------------------------------------------------------------------------------  -  Server - Signal_Certifications:1968
+☑ | Create         | -0.5μs  | Baseline: 0.6μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | Connect        | -0.6μs  | Baseline: 0.8μs  ▶ {...} | Results: 0.2μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | Once           | -0.5μs  | Baseline: 0.7μs  ▶ {...} | Results: 0.2μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | Fire_None      | -0.0μs  | Baseline: 0.1μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | Fire_One       | +0.5μs  | Baseline: 0.4μs  ▶ {...} | Results: 0.8μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | Fire_Many      | +0.5μs  | Baseline: 0.1μs  ▶ {...} | Results: 0.7μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | Fire_OneYield  | +0.4μs  | Baseline: 0.7μs  ▶ {...} | Results: 1.1μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | Fire_ManyYield | +0.8μs  | Baseline: 0.2μs  ▶ {...} | Results: 0.9μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | Disconnect     | -0.1μs  | Baseline: 0.2μs  ▶ {...} | Results: 0.1μs  ▶ {...}  -  Server - Signal_Certifications:225
+☑ | DisconnectAll  | -6.8μs  | Baseline: 7.9μs  ▶ {...} | Results: 1.1μs  ▶ {...}  -  Server - Signal_Certifications:225
+--------------------------------------------------------------------------------------  -  Server - Signal_Certifications:1968
+✅ | Speed Certified         |  -  Server - Signal_Certifications:125
 ```
