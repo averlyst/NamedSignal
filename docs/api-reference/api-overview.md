@@ -8,9 +8,9 @@ Overview of the NamedSignal API — the module Interface, `Signal` and `Connecti
 
 ### Constructors
 
-| Property  | Type                                                                                                            | Description                                                                          |
-| --------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `.new()`  | `read <Signature>() -> (Signal<Signature>)`                                                                     | Returns a new [`Signal`](#signal).                                                   |
+| Property | Type | Description |
+| - | - | - |
+| `.new()` | `read <Signature>() -> (Signal<Signature>)` | Returns a new [`Signal`](#signal). |
 | `.wrap()` | <code>read \<RBXSignal>(rbxSignal: RBXSignal) -> (<a href="#wrapsignal-type">WrapSignal\<RBXSignal></a>)</code> | Returns a new [`Signal`](#signal) that fires when the given `RBXScriptSignal` fires. |
 
 > [!IMPORTANT]
@@ -25,27 +25,28 @@ For simplicity, the exact types used such as generics or [User-Defined Type Func
 
 ### `Signal` {#signal}
 
-| Member                  | Type                                                        | Description                                                                                                                       |
-| ----------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `:CancelAllMutations()` | `read (self: Signal) -> ()`                                 | Cancels all deferred mutations that have not yet been processed on the `Signal`.                                                  |
-| `:DisconnectAll()`      | `read (self: Signal) -> ()`                                 | Disconnects all connections from the `Signal`.                                                                                    |
-| `:DisconnectAllNow()`   | `read (self: Signal) -> ()`                                 | The immediate mode equivalent of `Signal:DisconnectAll()`.                                                                        |
-| `:Destroy()`            | `read (self: Signal) -> ()`                                 | Destroys the `Signal`, disconning all connections in the process, and cancelling further mutations.                               |
-| `:DestroyNow()`         | `read (self: Signal) -> ()`                                 | The immediate mode equivalent of `Signal:Destroy()`.                                                                              |
-| `:Connect()`            | `read (self: Signal, func: (...any) -> ()) -> (Connection)` | Connects the given function to the `Signal` and returns a [`Connection`](#connection) that represents it.                         |
-| `:ConnectNow()`         | `read (self: Signal, func: (...any) -> ()) -> (Connection)` | The immediate mode equivalent of `Signal:Connect()`.                                                                              |
-| `:Once()`               | `read (self: Signal, func: (...any) -> ()) -> (Connection)` | Connects the given function to the `Signal` for a single invocation and returns a [`Connection`](#connection) that represents it. |
-| `:OnceNow()`            | `read (self: Signal, func: (...any) -> ()) -> (Connection)` | The immediate mode equivalent of `Signal:Once()`.                                                                                 |
-| `:Wait()`               | `read (self: Signal) -> (...any)`                           | Yields the calling thread until the `Signal` fires, and returns any arguments provided by it.                                     |
-| `:WaitNow()`            | `read (self: Signal) -> (...any)`                           | The immediate mode equivalent of `Signal:Wait()`.                                                                                 |
-| `:Fire()`               | `read (self: Signal, ...any) -> ()`                         | Calls all connected functions and resumes all waiting threads with the given arguments.                                           |
-| `:FireNow()`            | `read (self: Signal, ...any) -> ()`                         | The immediate mode equivalent of `Signal:Fire()`.                                                                                 |
+| Member | Type | Description |
+| - | - | - |
+| `:CancelAllMutations()` | `read (self: Signal) -> ()` | Cancels all deferred mutations that have not yet been processed on the `Signal`. |
+| `:GetConnections()` | `read (self: Signal) -> ({Connection})` | Returns an array of active [`Connection`](#connection)s on this `Signal` ordered from oldest to newest. |
+| `:DisconnectAll()` | `read (self: Signal) -> ()` | Disconnects all connections from the `Signal`. |
+| `:DisconnectAllNow()` | `read (self: Signal) -> ()` | The immediate mode equivalent of `Signal:DisconnectAll()`. |
+| `:Destroy()` | `read (self: Signal) -> ()` | Destroys the `Signal`, disconning all connections in the process, and cancelling further mutations. |
+| `:DestroyNow()` | `read (self: Signal) -> ()` | The immediate mode equivalent of `Signal:Destroy()`. |
+| `:Connect()` | `read (self: Signal, func: (...any) -> ()) -> (Connection)` | Connects the given function to the `Signal` and returns a [`Connection`](#connection) that represents it. |
+| `:ConnectNow()` | `read (self: Signal, func: (...any) -> ()) -> (Connection)` | The immediate mode equivalent of `Signal:Connect()`. |
+| `:Once()` | `read (self: Signal, func: (...any) -> ()) -> (Connection)` | Connects the given function to the `Signal` for a single invocation and returns a [`Connection`](#connection) that represents it. |
+| `:OnceNow()` | `read (self: Signal, func: (...any) -> ()) -> (Connection)` | The immediate mode equivalent of `Signal:Once()`. |
+| `:Wait()` | `read (self: Signal) -> (...any)` | Yields the calling thread until the `Signal` fires, and returns any arguments provided by it. |
+| `:WaitNow()` | `read (self: Signal) -> (...any)` | The immediate mode equivalent of `Signal:Wait()`. |
+| `:Fire()` | `read (self: Signal, ...any) -> ()` | Calls all connected functions and resumes all waiting threads with the given arguments. |
+| `:FireNow()` | `read (self: Signal, ...any) -> ()` | The immediate mode equivalent of `Signal:Fire()`. |
 
 ::: tip
 
 #### `:Wait()`/`:WaitNow()` can be resumed externally
 
-Unlike common implementations of `Signal:Wait()`, NamedSignal's can be safely resumed externally with `coroutine.resume`, without causing unexpected issues.
+Unlike common implementations of `Signal:Wait()`, NamedSignal's can be safely resumed externally, without causing unexpected issues!
 
 :::
 
@@ -59,26 +60,23 @@ Unlike common implementations of `Signal:Wait()`, NamedSignal's can be safely re
 
 ### `Connection` {#connection}
 
-| Member             | Type                                           | Description                                                           |
-| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------- |
-| `.Signal`          | <code>read <a href="#signal">Signal</a></code> | A reference to the [`Signal`](#signal) that this `Connection` is for. |
-| `.Connected`       | `read boolean`                                 | Describes whether the `Connection` is active.                         |
-| `.Callback`        | `read (...any) -> ()`                          | The connected function.                                               |
-| `:Disconnect()`    | `read (self: Connection) -> ()`                | Disconnects the `Connection` from the `Signal`.                       |
-| `:DisconnectNow()` | `read (self: Connection) -> ()`                | The immediate mode equivalent of `Connection:Disconnect()`.           |
-| `:Reconnect()`     | `read (self: Connection) -> ()`                | Reconnects the `Connection` to the `Signal`.                          |
-| `:ReconnectNow()`  | `read (self: Connection) -> ()`                | The immediate mode equivalent of `Connection:Reconnect()`.            |
-| `:Destroy()`       | `read (self: Connection) -> ()`                | Destroys the `Connection`.                                            |
+| Member | Type | Description |
+| - | - | - |
+| `.Signal` | <code>read <a href="#signal">Signal</a></code> | A reference to the [`Signal`](#signal) that this `Connection` is for. |
+| `.Connected` | `read boolean` | Describes whether the `Connection` is active. |
+| `.Callback` | `read (...any) -> ()` | The connected function. |
+| `:Disconnect()` | `read (self: Connection) -> ()` | Disconnects the `Connection` from the `Signal`. |
+| `:DisconnectNow()` | `read (self: Connection) -> ()` | The immediate mode equivalent of `Connection:Disconnect()`. |
+| `:Reconnect()` | `read (self: Connection) -> ()` | Reconnects the `Connection` to the `Signal`. |
+| `:ReconnectNow()` | `read (self: Connection) -> ()` | The immediate mode equivalent of `Connection:Reconnect()`. |
+| `:Destroy()` | `read (self: Connection) -> ()` | Destroys the `Connection`. |
+| `:DestroyNow()` | `read (self: Connection) -> ()` | The immediate mode equivalent of `Connection:Destroy()`. |
 
-::: info
-
-#### No `Connection:DestroyNow()`
-
-No `Connection:DestroyNow()` method is provided, as it would cause several issues with deferred mutations.
+::: tip
 
 #### `:Once()` is still once when `:Reconnect()`ing
 
-`:Once()` connections retain their behavior when reconnected, they will disconnect again immediately on the next invocation.
+`:Once()` connections **retain their behavior when reconnected**, they disconnect again on the next invocation!
 
 :::
 
