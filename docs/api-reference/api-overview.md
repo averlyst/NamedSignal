@@ -214,9 +214,14 @@ Controls the quality of error information provided in the output.
 - `"Warn"` uses `coroutine.resume` but outputs the error message with a simplified traceback. Better performance than `"Full"`.
 - `"None"` uses `coroutine.resume` but provides no error information. Best performance but not recommended for typical use.
 
-**Has no effect when [`SIGNAL_BEHAVIOR`](#config-signal-behavior) is set to `"Deferred"`**, `"Auto"` is the recommended default.
+**Has no effect when [`SIGNAL_BEHAVIOR`](#config-signal-behavior) is set to `"Deferred"`**, `"Full"` is the recommended default.
+
+> [!CAUTION] CAUTION: Here be dragons!
+> Switching to modes other than "Full" may lead to unexpected C-side issues in rare cases.
+>
+> It's strongly recommended that you do not change this unless you really need the extra performance and are aware of the risks.
 
 ```luau
 const ERROR_INFO_MODE: "Auto" | "Full" | "Warn" | "None"
-	= "Auto"
+	= "Full"
 ```

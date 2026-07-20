@@ -10,11 +10,10 @@ Todo-list for NamedSignal.
 
 ## In Progress
 
-- [ ] Experiment with 'spinning threadloop' optimization
-- [ ] Refactor types (especially UDTFs)
-
 ## Done ✓
 
+- [x] Experiment with and implement 'spinning threadloop' optimization (2.3.0-rc.1)
+- [x] Refactor types (especially UDTFs) (2.3.0-rc.1)
 - [x] Properly fix deferred mutations iterator invalidation (2.2.0-rc.1)
 - [x] Add `Signal:GetConnections()`
   - [x] Implement method (2.2.0-rc.1)

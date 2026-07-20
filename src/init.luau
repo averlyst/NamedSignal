@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.2.0
+	v2.3.0-rc.1
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -53,132 +53,40 @@ const SIGNAL_BEHAVIOR: "Immediate" | "Deferred"
 	"Full" uses task.spawn when available, providing the full error traceback with jump-to functionality, at the cost of worse performance.
 	"Warn" uses coroutine.resume but outputs the error message with a simplified traceback. Better performance than "Full".
 	"None" uses coroutine.resume but provides no error information. Best performance but not recommended for typical use.
-	Has no effect when SIGNAL_BEHAVIOR is set to "Deferred", "Auto" is the recommended default.
+	Has no effect when SIGNAL_BEHAVIOR is set to "Deferred", "Full" is the recommended default.
+
+	> [!CAUTION] Here be dragons!
+	> Switching to modes other than "Full" may lead to unexpected C-side issues in rare cases.
+	> It's strongly recommended that you do not change this unless you really need the extra performance and are aware of the risks.
 ]]
 const ERROR_INFO_MODE: "Auto" | "Full" | "Warn" | "None"
-	= "Auto"
+	= "Full"
 
 -- Imports --
 const Types = require("@self/Types")
 
--- Thread Recycling --
-
---[[
-	Creates and resumes a thread immediately, then returns it.
-	Significantly faster than <code>task.spawn</code>.
-]]
-const function spawnThread <A..., R...>(func: (A...) -> (R...), ...: A...): (thread)
-	const thread = coroutine.create(func)
-	coroutine.resume(thread, ...)
-	return thread
-end
-
---[[
-	Returns a boolean indicating if the given thread is resumable.
-]]
-const function isThreadResumable(co: thread): (boolean)
-	return coroutine.status(co) == "suspended"
-end
-
--- "Fast" thread cache, slightly improves the performance of non-yielding dispatch.
-local tL1: thread?
-
--- "Slow" thread cache
-const threadPool: {thread} = {}
-
---[[
-	Calls the given callback with the given arguments, then adds the thread into the cache for reuse.
-]]
-const function callOnAndCacheThread <A...>(thread: thread, callback: (A...) -> (), ...: A...): ()
-	callback(...)
-
-	-- Callback finished running, this thread is free again, add it back to the cache
-	if tL1 then
-		table.insert(threadPool, thread)
-	else
-		tL1 = thread
-	end
-end
-
---[[
-	Indefinitely looping function body of event handler coroutines.
-	Gets resumed with the thread and function to run followed by arguments to call the function with.
-
-	```luau
-	coroutine.resume(t, t, ...)
-	```
-	...where <code>t</code> is a thread that has the body of this function.
-]]
-const function eventHandlerRoutine(): ()
-	while true do
-		callOnAndCacheThread(coroutine.yield())
-	end
-end
-
---[[
-	Returns an available thread.
-]]
-const function getAvailableThread(): (thread)
-	local thread: thread
-	if tL1 then -- Check fast cache
-		thread = tL1
-		tL1 = nil
-	else
-		-- Check slow cache
-		const numThreads = #threadPool
-		if numThreads == 0 then
-			-- No thread is available in pool, return a new one.
-			return spawnThread(eventHandlerRoutine)
-		end
-
-		thread = threadPool[numThreads]
-		threadPool[numThreads] = nil -- Remove from free threads
-	end
-
-	-- Threads can be closed externally! Check before reuse.
-	if not isThreadResumable(thread) then
-		return spawnThread(eventHandlerRoutine)
-	end
-
-	return thread
-end
-
--- Function used for resuming threads used for invocation only.
--- Switched based on signal behavior, task library availability, and ERROR_INFO_MODE.
--- We use a mix of if-then-else expression, and the lua and-or idiom to intentionally use its fallback behavior.
--- This avoids excessively large and duplicated branching that comes with using exclusively if-then-else expression.
-const resumeListener = task and (
-	if SIGNAL_BEHAVIOR == "Deferred"
-		then task.defer
-	elseif ERROR_INFO_MODE == "Full"
-		or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
-		then task.spawn
-	else nil -- Fallback to below
-) or (
-	-- Task library is unavailable or a performance ERROR_INFO_MODE was chosen
-	if ERROR_INFO_MODE == "None"
-		then coroutine.resume
-	else (
-		function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
-			const log = warn or print -- Portability, the environment might not have warn.
-
-			return function(co: thread, ...: any): ()
-				const success, err = coroutine.resume(co, ...)
-				if success then return end
-
-				-- About as close as we can get to normal error semantics, just with some minor styling differences.
-				-- Avoiding tostring conversions to get proper outputs of non-string error messages.
-				log(
-					"Error occurred during invocation:",
-					if err ~= nil then err else "Error occurred, no output from Luau.",
-					debug.traceback(co, "\nStack Begin") .. "Stack End"
-				)
-			end
-		end
-	)()
-)
-
 -- Deferred Mutation Helpers --
+
+--[[
+	Returns the next node pointer of the preserved tail connection while clearing its reference.
+]]
+const function getPreservedTailNext(signal: InternalSignal): (InternalConnection?)
+	const pTail = signal._pTail
+	if not pTail then return nil end
+
+	signal._pTail = nil
+	return pTail and pTail._next
+end
+
+--[[
+	Removes the next node pointer of the preserved tail connection.
+]]
+const function removePreservedTailNext(signal: InternalSignal): ()
+	const existingPTail = signal._pTail
+	if existingPTail then
+		existingPTail._next = nil
+	end
+end
 
 --[[
 	Queues a mutation at the last mutation level, or creates a new one if one does not exist.
@@ -210,34 +118,133 @@ const function enqueueMutationLevel(mutationList: {{Types.SignalMutation}}, muta
 	end
 end
 
+-- Thread Logic --
+
+--[[
+	Creates a thread and resumes it immediately with itself as the only argument, then returns it.
+]]
+const function spawnThreadWithSelf(func: (...any) -> (...any)): (thread)
+	const thread = coroutine.create(func)
+	coroutine.resume(thread, thread)
+	return thread
+end
+
+--[[
+	Returns a boolean indicating if the given thread is resumable.
+]]
+const function isThreadResumable(co: thread): (boolean)
+	return coroutine.status(co) == "suspended"
+end
+
+local threadL1: thread?
+const threadL2: {thread?} = {}
+
+--[[
+	Adds a free thread to the cache.
+]]
+const function cacheThread(co: thread): ()
+	if not threadL1 then
+		threadL1 = co
+	else
+		table.insert(threadL2, co)
+	end
+end
+
+--[[
+	Runs a single listener cycle on the current thread.
+]]
+const function runListenerCycle(state: {InternalConnection}, signal: InternalSignal, ...: any): ()
+	local node = state[1]
+	while node do
+		state[1] = node._next or getPreservedTailNext(signal)
+
+		node.Callback(...)
+
+		-- Iterate to next node
+		node = state[1]
+	end
+end
+
+--[[
+	Indefinitely looping function body of dispatcher coroutines.
+]]
+const function dispatcherBody(co: thread): ()
+	while true do
+		runListenerCycle(coroutine.yield())
+		cacheThread(co)
+	end
+end
+
+--[[
+	Returns a dispatch thread, grabbing from cache or creating a new one.
+	Resume with a table with index 1 being the Connection node, Signal, and fire arguments.
+]]
+const function getDispatchThread(): (thread)
+	local thread: thread?
+	if threadL1 then
+		thread = threadL1
+		threadL1 = nil
+	else
+		const poolSize = #threadL2
+		if poolSize ~= 0 then
+			thread = threadL2[poolSize]
+			threadL2[poolSize] = nil
+		end
+	end
+
+	if not thread then
+		return spawnThreadWithSelf(dispatcherBody)
+	end
+
+	-- Threads can be closed externally! Check before reuse.
+	if not isThreadResumable(thread) then
+		return spawnThreadWithSelf(dispatcherBody)
+	end
+
+	return thread
+end
+
+-- Switched based on signal behavior, task library availability, and ERROR_INFO_MODE.
+-- We use a mix of if-then-else expression, and the lua and-or idiom to intentionally use its fallback behavior.
+-- This avoids excessively large and duplicated branching that comes with using exclusively if-then-else expression.
+const resumeThread = task and (
+	if SIGNAL_BEHAVIOR == "Deferred"
+		then task.defer
+	elseif ERROR_INFO_MODE == "Full"
+		or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
+		then task.spawn
+	else nil -- Fallback to below
+) or (
+	-- Task library is unavailable or a performance ERROR_INFO_MODE was chosen
+	if ERROR_INFO_MODE == "None"
+		then coroutine.resume
+	else (
+		function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
+			const log = warn or print -- Portability, the environment might not have warn.
+
+			return function(co: thread, ...: any): ()
+				const success, err = coroutine.resume(co, ...)
+				if success then return end
+
+				-- About as close as we can get to normal error semantics, just with some minor styling differences.
+				-- Avoiding tostring conversions to get proper outputs of non-string error messages.
+				log(
+					"Error occurred during invocation:",
+					if err ~= nil then err else "Error occurred, no output from Luau.",
+					debug.traceback(co, "\nStack Begin") .. "Stack End"
+				)
+			end
+		end
+	)()
+)
+
 -- Connection Class --
 const Connection = {}
 Connection.__index = Connection
 
-export type Connection<Signature = Types.LooseSignature> = Types.Connection<Signature>
+export type Connection<Signature = Types.DefaultSignature> = Types.Connection<Signature>
 export type GenericConnection<Params...> = Types.GenericConnection<Params...>
 type InternalConnection = Types.InternalConnection
-
---[[
-	Returns the next node pointer of the preserved tail connection while clearing its reference.
-]]
-const function getPreservedTailNext(signal: InternalSignal): (InternalConnection?)
-	const pTail = signal._pTail
-	if not pTail then return nil end
-
-	signal._pTail = nil
-	return pTail and pTail._next
-end
-
---[[
-	Removes the next node pointer of the preserved tail connection.
-]]
-const function removePreservedTailNext(signal: InternalSignal): ()
-	const existingPTail = signal._pTail
-	if existingPTail then
-		existingPTail._next = nil
-	end
-end
 
 const function baseLinkConnection(connection: InternalConnection, signal: InternalSignal, tail: InternalConnection?): ()
 	if tail then -- Link the connection to the tail connection if it exists
@@ -417,20 +424,20 @@ end
 const Signal = {}
 Signal.__index = Signal
 
-export type Signal<Signature = Types.LooseSignature> = Types.Signal<Signature>
+export type Signal<Signature = Types.DefaultSignature> = Types.Signal<Signature>
 export type GenericSignal<Params...> = Types.GenericSignal<Params...>
-export type WrapSignal<RBXSignal> = Types.WrapSignal<RBXSignal>
+export type WrapSignal<OtherSignal> = Types.WrapSignal<OtherSignal>
 type InternalSignal = Types.InternalSignal
 
 function Signal.GetConnections(self: InternalSignal): ({Connection})
-	const connectionList: {Connection} = {}
+	const connectionList: {InternalConnection} = {}
 	local connection = self._head
 	while connection do
 		table.insert(connectionList, connection)
 		connection = connection._next -- We don't need to account for pTails as we don't dispatch any listeners here.
 	end
 
-	return connectionList
+	return connectionList :: {Connection}
 end
 
 const function cancelAllMutations(self: InternalSignal): ()
@@ -605,7 +612,7 @@ const function signalConnect(signal: InternalSignal, func: (...any) -> ()): (Int
 end
 
 --[[
-	A variant of <code>linkCsignalConnectonnection</code> that handles iterator invalidation edge cases.
+	A variant of <code>signalConnect</code> that handles iterator invalidation edge cases.
 ]]
 const function signalConnectNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	if signal._firing then
@@ -649,13 +656,13 @@ Signal.OnceNow = signalOnceNow
 const function safeAwaitSignal(connection: InternalConnection, signal: InternalSignal): (...any)
 	const args = {coroutine.yield()}
 	unlinkConnectionNow(connection, signal) -- Unlink after resuming to account for external resumption
-	return unpack(args)
+	return table.unpack(args)
 end
 
 const function resumeAwaiting(thread: thread, ...: any): ()
 	-- Check that the thread is resumable to avoid nuisance errors.
 	if isThreadResumable(thread) then
-		resumeListener(thread, ...)
+		resumeThread(thread, ...)
 	end
 end
 
@@ -677,14 +684,9 @@ end
 	Calls all currently connected functions and processes first-level mutations.
 ]]
 const function processDispatch(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any): ()
-	local connection = signal._head
-	while connection do
-		const thread = getAvailableThread()
-		resumeListener(thread, thread, connection.Callback, ...)
-
-		-- Iterate to the next connection, either from this node, or from the preserve tail in case of immediate-mode
-		-- DisconnectAllNow operations.
-		connection = connection._next or getPreservedTailNext(signal)
+	const state = {signal._head}
+	while state[1] do
+		resumeThread(getDispatchThread(), state, signal, ...)
 	end
 
 	-- Apply first-level mutations.
@@ -700,7 +702,7 @@ const function processDispatch(signal: InternalSignal, mutationList: {{Types.Sig
 		if not func then
 			-- The function is only undefined for re-entrant firing.
 			-- As re-entrant firing creates a new mutation level, no more mutations will be on this level.
-			processDispatch(signal, mutationList, unpack(mutation.a :: any))
+			processDispatch(signal, mutationList, table.unpack(mutation.a :: any))
 			return
 		end
 
@@ -752,7 +754,7 @@ end
 --[[
 	Returns a new <code>Signal</code>.
 ]]
-function NamedSignal.new<Signature>(): (Signal<unknownFallback<Signature, Types.LooseSignature>>)
+function NamedSignal.new<Signature>(): (Signal<unknownFallback<Signature, Types.DefaultSignature>>)
 	return setmetatable({
 		_mutations = {},
 	}, Signal) :: any
@@ -761,12 +763,12 @@ end
 --[[
 	Returns a new <code>Signal</code> that fires when the given <code>RBXScriptSignal</code> fires.
 ]]
-function NamedSignal.wrap<RBXSignal>(rbxSignal: RBXSignal & RBXScriptSignal): (WrapSignal<RBXSignal>)
+function NamedSignal.wrap<OtherSignal>(otherSignal: OtherSignal & RBXScriptSignal): (WrapSignal<OtherSignal>)
 	const signal: InternalSignal = setmetatable({
 		_mutations = {},
-	}, Signal)
+	}, Signal) :: any
 
-	signal._wrapConnection = rbxSignal:Connect(function(...: any): ()
+	signal._wrapConnection = otherSignal:Connect(function(...: any): ()
 		signal:Fire(...)
 	end)
 

@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0-rc.1] - 2026-07-20
+
+### Changed
+
+- Maintenance: Refactored Types module. Shouldn't change type behavior in public APIs, but may improve inference speed.
+- Config: The default `ERROR_INFO_MODE` has been changed to `"Full"` (always prefer `task.spawn`) due to possible C-side issues with `coroutine.resume`.
+  - You may opt back into a different mode if you require the additional performance and are aware of the risks.
+- Performance: Greatly improved non-yielding fire performance by switching to a more optimized dispatching technique with minimized thread resumptions.
+  - Signals with only one connection may be slightly slower, but benefits should be visible with two or more connections.
+  <br><br>
+  
+  From internal benchmarking:
+
+  | Connection Count | % Improvement from v2.2.0 |
+  | ---------------- | ------------------------- |
+  | 1                | -18.8% (Slower)           |
+  | 2                | +49.2% (Faster)           |
+  | 5                | +258.6% (Faster)          |
+  | 10               | +535.1% (Faster)          |
+  | 50               | +1523.2% (Faster)         |
+
 ## [2.2.0] - 2026-07-17
 
 Changes since v2.1.7:
@@ -186,6 +207,8 @@ Bumped version to major 1 in accordance with Semantic Versioning 2.0,0, indicati
 
 Initial release of NamedSignal
 
+<!-- [2.3.0]: https://github.com/averlyst/NamedSignal/compare/v2.2.2...v2.3.0 -->
+[2.3.0-rc.1]: https://github.com/averlyst/NamedSignal/compare/v2.2.0...v2.3.0-rc.1
 [2.2.0]: https://github.com/averlyst/NamedSignal/compare/v2.1.7...v2.2.0
 [2.2.0-rc.2]: https://github.com/averlyst/NamedSignal/compare/v2.1.7-rc.1...v2.2.0-rc.2
 [2.2.0-rc.1]: https://github.com/averlyst/NamedSignal/compare/v2.1.7...v2.2.0-rc.1
