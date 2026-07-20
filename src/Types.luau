@@ -2,11 +2,6 @@
 
 -- Basic Types --
 export type DefaultSignature = (...any) -> ()
-export type SignalMutation = {
-	f: ((InternalSignal | InternalConnection | thread, InternalSignal?) -> ())?, -- for any mutation that isn't fire
-	c: InternalConnection?, -- for connection operations
-	a: {any}?, -- array of stored arguments from deferred fire
-}
 
 -- Type Functions --
 
@@ -281,6 +276,14 @@ export type GenericSignal<Params... = ...any> = BaseSignal<
 		]]
 		function(self: GenericSignal<Params...>, ...: Params...) end
 	),
+}
+
+-- We could definitely optimize mutations down the line if necessary. Simplicity and readability was the main focus at
+-- the time of writing this.
+export type SignalMutation = {
+	f: ((InternalSignal | InternalConnection | thread, InternalSignal?) -> ())?, -- for any mutation that isn't fire
+	c: InternalConnection?, -- for connection operations
+	a: {any}?, -- array of stored arguments from deferred fire
 }
 
 -- We don't need to use internal UDTF here as there is no read-only public API that we write to.
