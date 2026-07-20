@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Maintenance: Refactored Types module. Shouldn't change type behavior in public APIs, but may improve inference speed.
 - Config: The default `ERROR_INFO_MODE` has been changed to `"Full"` (always prefer `task.spawn`) due to possible C-side issues with `coroutine.resume`.
   - You may opt back into a different mode if you require the additional performance and are aware of the risks.
-- Performance: Greatly improved non-yielding fire performance by switching to a more optimized dispatching technique with minimized thread resumptions.
+- Performance: Greatly improved non-yielding fire performance by switching to a more efficient dispatching technique with minimized thread resumptions.
   - Signals with only one connection may be slightly slower, but benefits should be visible with two or more connections.
   <br><br>
   

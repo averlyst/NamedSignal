@@ -10,6 +10,8 @@ Todo-list for NamedSignal.
 
 ## In Progress
 
+- [ ] Update docs regarding performance to account for v2.3.0 improvements.
+
 ## Done ✓
 
 - [x] Experiment with and implement 'spinning threadloop' optimization (2.3.0-rc.1)
