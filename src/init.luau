@@ -202,7 +202,7 @@ const function getDispatchThread(): (thread)
 	return thread
 end
 
-const resumeThread = if task and (
+const resumeThread = task and (
 	if ERROR_INFO_MODE == "Full"
 	or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
 		then task.spawn
