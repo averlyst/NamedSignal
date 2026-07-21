@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.3.0
+	v2.3.1
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -39,21 +39,19 @@
 --!optimize 2
 
 -- Configuration --
-
 --[[
-	Controls whether event handlers are fired immediately or deferred.
-	"Immediate" is the recommended default for performance reasons.
+	> [!WARNING] No Stability Guarantee
+	> Flags are unstable and subject to change or removal.
+	> They are set to the recommended values by default, only change these if you know what you're doing.
 ]]
-const SIGNAL_BEHAVIOR: "Immediate" | "Deferred"
-	= "Immediate"
 
 --[[
-	Controls the quality of error information provided in the output.
-	"Auto" uses "Full" in Roblox Studio, and "Warn" in production.
-	"Full" uses task.spawn when available, providing the full error traceback with jump-to functionality, at the cost of worse performance.
-	"Warn" uses coroutine.resume but outputs the error message with a simplified traceback. Better performance than "Full".
-	"None" uses coroutine.resume but provides no error information. Best performance but not recommended for typical use.
-	Has no effect when SIGNAL_BEHAVIOR is set to "Deferred", "Full" is the recommended default.
+	Controls the quality of error information provided in the output in exchange for performance.
+	- "Auto" uses "Full" in Roblox Studio, and "Warn" in production.
+	- "Full" uses task.spawn when available, providing the full error traceback with jump-to functionality, at the cost of worse performance.
+	- "Warn" uses coroutine.resume but outputs the error message with a simplified traceback. Better performance than "Full".
+	- "None" uses coroutine.resume but provides no error information. Best performance but not recommended for typical use.
+	"Full" is the recommended default.
 
 	> [!CAUTION] Here be dragons!
 	> Switching to modes other than "Full" may lead to unexpected C-side issues in rare cases.
@@ -204,22 +202,14 @@ const function getDispatchThread(): (thread)
 	return thread
 end
 
--- Switched based on signal behavior, task library availability, and ERROR_INFO_MODE.
--- We use a mix of if-then-else expression, and the lua and-or idiom to intentionally use its fallback behavior.
--- This avoids excessively large and duplicated branching that comes with using exclusively if-then-else expression.
-const resumeThread = task and (
-	if SIGNAL_BEHAVIOR == "Deferred"
-		then task.defer
-	elseif ERROR_INFO_MODE == "Full"
-		or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
+const resumeThread = if task and (
+	if ERROR_INFO_MODE == "Full"
+	or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
 		then task.spawn
 	else nil -- Fallback to below
 ) or (
-	-- Task library is unavailable or a performance ERROR_INFO_MODE was chosen
-	if ERROR_INFO_MODE == "None"
-		then coroutine.resume
-	else (
-		function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
+	if ERROR_INFO_MODE == "Warn" then
+		(function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
 			const log = warn or print -- Portability, the environment might not have warn.
 
 			return function(co: thread, ...: any): ()
@@ -234,8 +224,9 @@ const resumeThread = task and (
 					debug.traceback(co, "\nStack Begin") .. "Stack End"
 				)
 			end
-		end
-	)()
+		end)()
+	else
+		coroutine.resume
 )
 
 -- Connection Class --
