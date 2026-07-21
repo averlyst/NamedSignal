@@ -20,16 +20,11 @@ Inspired by CPU cache architecture, NamedSignal implements **2 layers of thread 
 
 Accessing an upvalue is faster than indexing an array, so performance is slightly improved for non-yielding invocation.
 
-### Reduced Resumption Overhead in Production
+### Minimized Thread Resumption for Non-Yielding Connections
 
-By default, NamedSignal uses [`coroutine.resume`](https://create.roblox.com/docs/reference/engine/libraries/coroutine#resume) in production to greatly reduce overhead when resuming threads with an efficient custom error and traceback logger, and [`task.spawn`](https://create.roblox.com/docs/reference/engine/libraries/task#spawn) in Studio for better debugging.
+Most signal libraries cache one or more threads, however there is still a very large overhead for resumption.
 
-This behavior changes with different configurations:
-
-- When `SIGNAL_BEHAVIOR` is set to `"Deferred"` ([`task.defer`](https://create.roblox.com/docs/reference/engine/libraries/task#defer) will always be used instead). `ERROR_INFO_MODE` is ignored in this mode.
-- When `ERROR_INFO_MODE` is set to `"Full"`, `task.spawn` is always used.
-- When `ERROR_INFO_MODE` is set to `"Warn"`, `coroutine.resume` with the custom logger is always used.
-- When `ERROR_INFO_MODE` is set to `"None"`, `coroutine.resume` is always used, without any form of error logging.
+NamedSignal improves upon this by using a more efficient dispatching technique that only resumes more threads when a callback yields, leading to vastly better non-yielding fire performance.
 
 ### Avoiding The OOP API Internally
 
