@@ -189,36 +189,23 @@ end)
 
 These constants are located near the top of the script and may be configured by the developer. They are set to the recommended values by default, and should not need to be changed.
 
-::: warning WARNING: No Stability Guarantee
-
-These values may change or be removed as NamedSignal evolves, you will also need to reconfigure these every update if you've overriden them.
-
-:::
-
-### `SIGNAL_BEHAVIOR` {#config-signal-behavior}
-
-Controls whether event handlers are fired immediately or deferred.
-`"Immediate"` is the recommended default for performance reasons.
-
-```luau
-const SIGNAL_BEHAVIOR: "Immediate" | "Deferred"
-	= "Immediate"
-```
+> [!WARNING] No Stability Guarantee
+> Flags are unstable and subject to change or removal.
+> They are set to the recommended values by default, only change these if you know what you're doing.
 
 ### `ERROR_INFO_MODE` {#config-error-info-mode}
 
-Controls the quality of error information provided in the output.
+Controls the quality of error information provided in the output in exchange for performance.
 
 - `"Auto"` uses `"Full"` in Roblox Studio, and `"Warn"` in production.
 - `"Full"` uses `task.spawn` when available, providing the full error traceback with jump-to functionality, at the cost of worse performance.
 - `"Warn"` uses `coroutine.resume` but outputs the error message with a simplified traceback. Better performance than `"Full"`.
 - `"None"` uses `coroutine.resume` but provides no error information. Best performance but not recommended for typical use.
 
-**Has no effect when [`SIGNAL_BEHAVIOR`](#config-signal-behavior) is set to `"Deferred"`**, `"Full"` is the recommended default.
+`"Full"` is the recommended default.
 
-> [!CAUTION] CAUTION: Here be dragons!
+> [!CAUTION] Here be dragons!
 > Switching to modes other than "Full" may lead to unexpected C-side issues in rare cases.
->
 > It's strongly recommended that you do not change this unless you really need the extra performance and are aware of the risks.
 
 ```luau
