@@ -11,6 +11,8 @@ Todo-list for NamedSignal.
 ## In Progress
 
 - [ ] Update docs regarding performance to account for v2.3.0 improvements.
+  - [x] Update technical documentation listing optimizations.
+  - [ ] Update comparisons to other libraries
 
 ## Done ✓
 

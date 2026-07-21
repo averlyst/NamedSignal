@@ -22,6 +22,12 @@ The API mirrors common standard and extended Signal APIs, with additional qualit
 
 See how NamedSignal compares to alternatives!
 
+::: tip Work in Progress!
+
+Performance for invocations has vastly improved since v2.3.0, these comparisons are currently outdated and pending updates.
+
+:::
+
 <!--Vs Roblox BindableEvent-->
 
 ::: details <h3>vs. BindableEvents</h3> {#vs-bindableevents}
