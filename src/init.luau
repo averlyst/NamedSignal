@@ -1,7 +1,7 @@
 --[[
 	-- NamedSignal --
 	
-	v2.3.1
+	v2.3.2
 
 	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
@@ -68,7 +68,7 @@ const Types = require("@self/Types")
 --[[
 	Returns the next node pointer of the preserved tail connection while clearing its reference.
 ]]
-const function getPreservedTailNext(signal: InternalSignal): (InternalConnection?)
+const function popPreservedTailNext(signal: InternalSignal): (InternalConnection?)
 	const pTail = signal._pTail
 	if not pTail then return nil end
 
@@ -76,9 +76,6 @@ const function getPreservedTailNext(signal: InternalSignal): (InternalConnection
 	return pTail and pTail._next
 end
 
---[[
-	Removes the next node pointer of the preserved tail connection.
-]]
 const function removePreservedTailNext(signal: InternalSignal): ()
 	const existingPTail = signal._pTail
 	if existingPTail then
@@ -151,12 +148,19 @@ end
 const function runListenerCycle(state: {InternalConnection}, signal: InternalSignal, ...: any): ()
 	local node = state[1]
 	while node do
-		state[1] = node._next or getPreservedTailNext(signal)
-
+		state[1] = node._next or popPreservedTailNext(signal)
+		
 		node.Callback(...)
-
-		-- Iterate to next node from shared state, safely stops if dispatch is already completed.
-		node = state[1]
+		
+		-- Due to states being inaccessible to disconnections, the state may be stale.
+		-- This is an unfortunate cost we have to pay for correctness, but the more efficient dispatching technique
+		-- makes this well worth the single-digit percentage regression.
+		if node.Connected then
+			node = state[1]
+		else
+			node = node._next or popPreservedTailNext(signal)
+			state[1] = node
+		end
 	end
 end
 
@@ -201,9 +205,9 @@ end
 
 const resumeThread = task and (
 	if ERROR_INFO_MODE == "Full"
-	or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
+		or ERROR_INFO_MODE == "Auto" and typeof(game) == "Instance" and game:GetService("RunService"):IsStudio()
 		then task.spawn
-	else nil -- Fallback to below
+		else nil -- Fallback to below
 ) or (
 	if ERROR_INFO_MODE == "Warn" then
 		(function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
@@ -222,7 +226,7 @@ const resumeThread = task and (
 				)
 			end
 		end)()
-	else
+		else
 		coroutine.resume
 )
 
@@ -246,9 +250,6 @@ const function baseLinkConnection(connection: InternalConnection, signal: Intern
 	signal._tail = connection
 end
 
---[[
-	Links the connection to the end of the signal.
-]]
 const function linkConnection(connection: InternalConnection, signal: InternalSignal): ()
 	if connection.Connected then return end
 	connection.Connected = true
@@ -273,7 +274,7 @@ const function linkConnectionNow(connection: InternalConnection, signal: Interna
 			if not tail._prev then
 				signal._head = connection
 			end
-			
+
 			tail._next = connection
 		elseif not connection._prev then
 			signal._head = connection
@@ -291,9 +292,6 @@ const function baseUnlinkConnection(prv: InternalConnection?, nxt: InternalConne
 	end
 end
 
---[[
-	Unlinks the connection from the signal.
-]]
 const function unlinkConnection(connection: InternalConnection, signal: InternalSignal): ()
 	if not connection.Connected then return end
 	connection.Connected = false
@@ -317,7 +315,7 @@ end
 const function unlinkConnectionNow(connection: InternalConnection, signal: InternalSignal): ()
 	if not connection.Connected then return end
 	connection.Connected = false
-	
+
 	-- Bridge gaps, set prev next to this one's next and vice versa.
 	-- Do NOT clear pointers, as it can cause iterator invalidation.
 	const prv, nxt = connection._prev, connection._next
@@ -331,7 +329,7 @@ const function unlinkConnectionNow(connection: InternalConnection, signal: Inter
 			removePreservedTailNext(signal)
 			signal._pTail = connection
 		end
-		
+
 		signal._tail = prv
 	end
 end
@@ -570,7 +568,7 @@ const function newLinkedConnectionNow(signal: InternalSignal, func: (...any) -> 
 	else
 		tail = signal._pTail
 		signal._head = connection
-		
+
 		if tail then
 			tail._next = connection
 		end
@@ -671,10 +669,13 @@ end
 	Calls all currently connected functions and processes first-level mutations.
 ]]
 const function processDispatch(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any): ()
+	const head = signal._head
+	if not head then return end
+
 	-- Dispatcher with minimized thread resumption, multiple listeners are dispatched within a thread until one yields.
 	-- Some alternatives for shared state were considered such as a function with upvalues, however they ended up being
 	-- less performant than this table solution.
-	const state = {signal._head}
+	const state = {head}
 	while state[1] do
 		resumeThread(getDispatchThread(), state, signal, ...)
 	end

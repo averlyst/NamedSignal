@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.2] - 2026-07-22
+
+### Fixed
+
+- Fixed a regression in v2.3.x where immediate-mode disconnections did not stop the listener from being dispatched.
+
+### Changed
+
+- Improved performance when dispatching signals with no connections.
+
 ## [2.3.1] - 2026-07-21
 
 ### Removed
@@ -243,6 +253,7 @@ Bumped version to major 1 in accordance with Semantic Versioning 2.0,0, indicati
 
 Initial release of NamedSignal
 
+[2.3.2]: https://github.com/averlyst/NamedSignal/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/averlyst/NamedSignal/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/averlyst/NamedSignal/compare/v2.2.2...v2.3.0
 [2.3.0-rc.1]: https://github.com/averlyst/NamedSignal/compare/v2.2.0...v2.3.0-rc.1
