@@ -4,7 +4,6 @@
 export type DefaultSignature = (...any) -> ()
 
 -- Type Functions --
-
 --[[
 	Makes all read-only or write-only properties to be both writable and readable.
 ]]
@@ -107,7 +106,6 @@ type function SignalWaitSignature(signature: type): (type)
 end
 
 -- Connection Types --
-
 type BaseConnection<Signal, Signature> = {
 	read Signal: Signal,
 	read Connected: boolean,
@@ -162,7 +160,6 @@ export type InternalConnection = internal<GenericConnection> & {
 }
 
 -- Signal Types --
-
 -- Base signal type without Fire/Wait signatures
 type BaseSignal<Signal, Connection, Signature> = {
 	read CancelAllMutations: typeof(
