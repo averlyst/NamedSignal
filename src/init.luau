@@ -137,9 +137,6 @@ end
 local threadL1: thread?
 const threadL2: {thread?} = {}
 
---[[
-	Adds a free thread to the cache.
-]]
 const function cacheThread(co: thread): ()
 	if not threadL1 then
 		threadL1 = co
@@ -158,7 +155,7 @@ const function runListenerCycle(state: {InternalConnection}, signal: InternalSig
 
 		node.Callback(...)
 
-		-- Iterate to next node
+		-- Iterate to next node from shared state, safely stops if dispatch is already completed.
 		node = state[1]
 	end
 end
@@ -270,6 +267,7 @@ const function linkConnectionNow(connection: InternalConnection, signal: Interna
 	if tail then
 		baseLinkConnection(connection, signal, tail)
 	else
+		-- In case the tail connection was disconnected during active iteration.
 		tail = signal._pTail
 		if tail then
 			if not tail._prev then
@@ -535,9 +533,6 @@ const function newUnlinkedConnection(signal: InternalSignal, func: (...any) -> (
 	}, Connection) :: any
 end
 
---[[
-	Returns a new linked Connection.
-]]
 const function newLinkedConnection(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
 	const tail = signal._tail
 	const connection: InternalConnection = setmetatable({
@@ -647,7 +642,7 @@ Signal.OnceNow = signalOnceNow
 ]]
 const function safeAwaitSignal(connection: InternalConnection, signal: InternalSignal): (...any)
 	const args = {coroutine.yield()}
-	unlinkConnectionNow(connection, signal) -- Unlink after resuming to account for external resumption
+	unlinkConnectionNow(connection, signal) -- Attempt unlink after resuming to account for external resumption
 	return table.unpack(args)
 end
 
@@ -676,6 +671,9 @@ end
 	Calls all currently connected functions and processes first-level mutations.
 ]]
 const function processDispatch(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any): ()
+	-- Dispatcher with minimized thread resumption, multiple listeners are dispatched within a thread until one yields.
+	-- Some alternatives for shared state were considered such as a function with upvalues, however they ended up being
+	-- less performant than this table solution.
 	const state = {signal._head}
 	while state[1] do
 		resumeThread(getDispatchThread(), state, signal, ...)
