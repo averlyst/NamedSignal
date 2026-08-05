@@ -8,7 +8,7 @@ NamedSignal is a pure-Luau implementation, and as such cannot facilitate communi
 
 ## Re-entrancy does not yield
 
-Unlike other Signal libraries that implement deferred mutations, NamedSignal does not yield the calling thread for re-entrant firing. See ['Not Quite to Spec'](gohans-certification#not-quite-to-spec) for detailed information and reasoning.
+Unlike other signal libraries that implement deferred mutations, NamedSignal does not yield the calling thread for re-entrant firing. See ['Not Quite to Spec'](gohans-certification#not-quite-to-spec) for detailed information and reasoning.
 
 As such, deferred mutations that immediately follow in the same listener can precede mutations made by the next listener in line to be invoked.
 
