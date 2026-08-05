@@ -1,9 +1,9 @@
 --[[
 	-- NamedSignal --
 	
-	v2.3.2
+	v2.3.3
 
-	A Signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
+	A signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
 
 	Comprehensive documentation and additional info is available at:
@@ -11,28 +11,6 @@
 
 	This software is licensed under the MIT License:
 		https://github.com/averlyst/NamedSignal/blob/main/LICENSE
-
-		MIT License
-
-		Copyright (c) 2026 Averlyst
-
-		Permission is hereby granted, free of charge, to any person obtaining a copy
-		of this software and associated documentation files (the "Software"), to deal
-		in the Software without restriction, including without limitation the rights
-		to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-		copies of the Software, and to permit persons to whom the Software is
-		furnished to do so, subject to the following conditions:
-
-		The above copyright notice and this permission notice shall be included in all
-		copies or substantial portions of the Software.
-
-		THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-		IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-		FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-		AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-		LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-		OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-		SOFTWARE.
 ]]
 
 --!strict
@@ -118,7 +96,7 @@ end
 --[[
 	Creates a thread and resumes it immediately with itself as the only argument, then returns it.
 ]]
-const function spawnThreadWithSelf(func: (...any) -> (...any)): (thread)
+const function spawnThreadWithSelf<T..., U...>(func: (T...) -> (U...)): (thread)
 	const thread = coroutine.create(func)
 	coroutine.resume(thread, thread)
 	return thread
@@ -145,7 +123,7 @@ end
 --[[
 	Runs a single listener cycle on the current thread.
 ]]
-const function runListenerCycle(state: {InternalConnection}, signal: InternalSignal, ...: any): ()
+const function runListenerCycle(state: {InternalConnection}, signal: InternalSignal, ...: unknown): ()
 	local node = state[1]
 	while node do
 		state[1] = node._next or popPreservedTailNext(signal)
@@ -210,10 +188,10 @@ const resumeThread = task and (
 		else nil -- Fallback to below
 ) or (
 	if ERROR_INFO_MODE == "Warn" then
-		(function(): ((thread, ...any) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
+		(function(): ((thread, ...unknown) -> ()) -- "Auto" in production or "Warn" ERROR_INFO_MODE
 			const log = warn or print -- Portability, the environment might not have warn.
 
-			return function(co: thread, ...: any): ()
+			return function(co: thread, ...: unknown): ()
 				const success, err = coroutine.resume(co, ...)
 				if success then return end
 
@@ -234,9 +212,15 @@ const resumeThread = task and (
 const Connection = {}
 Connection.__index = Connection
 
+--- The UDTF-managed <code>Connection</code> type. Use <code>GenericConnection</code> for self-recursive <code>Connection</code> types.
 export type Connection<Signature = Types.DefaultSignature> = Types.Connection<Signature>
+
+--- The pure generics <code>Connection</code> type.
 export type GenericConnection<Params...> = Types.GenericConnection<Params...>
+
+--- A <code>Connection</code> type that infers a signature from the given <code>RBXScriptSignal</code>.
 export type WrapConnection<OtherSignal> = Types.WrapConnection<OtherSignal>
+
 type InternalConnection = Types.InternalConnection
 
 const function baseLinkConnection(connection: InternalConnection, signal: InternalSignal, tail: InternalConnection?): ()
@@ -338,7 +322,7 @@ function Connection.Disconnect(self: InternalConnection): ()
 	const signal = self.Signal
 	if signal._firing then
 		enqueueMutation(signal._mutations, {
-			f = unlinkConnection :: any, c = self
+			f = unlinkConnection, c = self
 		})
 	else
 		unlinkConnection(self, signal)
@@ -358,7 +342,7 @@ function Connection.Reconnect(self: InternalConnection): ()
 	const signal = self.Signal
 	if signal._firing then
 		enqueueMutation(signal._mutations, {
-			f = linkConnection :: any, c = self,
+			f = linkConnection, c = self,
 		})
 	else
 		linkConnection(self, signal)
@@ -384,7 +368,7 @@ function Connection.Destroy(self: InternalConnection): ()
 	const signal = self.Signal
 	if signal._firing then
 		enqueueMutation(signal._mutations, {
-			f = destroyConnection :: any, c = self
+			f = destroyConnection, c = self
 		})
 	else
 		destroyConnection(self)
@@ -412,9 +396,15 @@ end
 const Signal = {}
 Signal.__index = Signal
 
+--- The UDTF-managed <code>Signal</code> type. Use <code>GenericSignal</code> for self-recursive <code>Signal</code> types.
 export type Signal<Signature = Types.DefaultSignature> = Types.Signal<Signature>
+
+--- The pure generics <code>Signal</code> type.
 export type GenericSignal<Params...> = Types.GenericSignal<Params...>
+
+--- A <code>Signal</code> type that infers a signature from the given <code>RBXScriptSignal</code>.
 export type WrapSignal<OtherSignal> = Types.WrapSignal<OtherSignal>
+
 type InternalSignal = Types.InternalSignal
 
 function Signal.GetConnections(self: InternalSignal): ({Connection})
@@ -458,7 +448,7 @@ end
 function Signal.DisconnectAll(self: InternalSignal): ()
 	if self._firing then
 		enqueueMutation(self._mutations, {
-			f = disconnectAll :: any
+			f = disconnectAll, c = nil
 		})
 	else
 		disconnectAll(self)
@@ -511,7 +501,7 @@ end
 function Signal.Destroy(self: InternalSignal): ()
 	if self._firing then
 		enqueueMutation(self._mutations, {
-			f = destroySignal :: any
+			f = destroySignal, c = nil
 		})
 	else
 		destroySignal(self)
@@ -523,7 +513,7 @@ Signal.DestroyNow = destroySignal
 --[[
 	Returns a new unlinked Connection, used for deferred connections that are scheduled to connect at a later time.
 ]]
-const function newUnlinkedConnection(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+const function newUnlinkedConnection(signal: InternalSignal, func: (...unknown) -> ()): (InternalConnection)
 	return setmetatable({
 		Connected = false,
 		Callback = func,
@@ -531,7 +521,7 @@ const function newUnlinkedConnection(signal: InternalSignal, func: (...any) -> (
 	}, Connection) :: any
 end
 
-const function newLinkedConnection(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+const function newLinkedConnection(signal: InternalSignal, func: (...unknown) -> ()): (InternalConnection)
 	const tail = signal._tail
 	const connection: InternalConnection = setmetatable({
 		Connected = true,
@@ -554,7 +544,7 @@ end
 --[[
 	A variant of <code>newLinkedConnection</code> that handles iterator invalidation edge cases.
 ]]
-const function newLinkedConnectionNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+const function newLinkedConnectionNow(signal: InternalSignal, func: (...unknown) -> ()): (InternalConnection)
 	local tail = signal._tail
 	const connection: InternalConnection = setmetatable({
 		Connected = true,
@@ -583,11 +573,11 @@ end
 	Connects the given function to the <code>Signal</code> and returns a <code>Connection</code> that represents it.
 	Depending on the signal's fire state, returns a queued unlinked connection, or an immediately linked connection.
 ]]
-const function signalConnect(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+const function signalConnect(signal: InternalSignal, func: (...unknown) -> ()): (InternalConnection)
 	if signal._firing then
 		const unlinked = newUnlinkedConnection(signal, func)
 		enqueueMutation(signal._mutations, {
-			f = linkConnection :: any, c = unlinked
+			f = linkConnection, c = unlinked
 		})
 
 		return unlinked
@@ -599,7 +589,7 @@ end
 --[[
 	A variant of <code>signalConnect</code> that handles iterator invalidation edge cases.
 ]]
-const function signalConnectNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+const function signalConnectNow(signal: InternalSignal, func: (...unknown) -> ()): (InternalConnection)
 	if signal._firing then
 		return newLinkedConnectionNow(signal, func)
 	else
@@ -610,9 +600,9 @@ end
 Signal.Connect = signalConnect
 Signal.ConnectNow = signalConnectNow
 
-const function signalOnce(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+const function signalOnce(signal: InternalSignal, func: (...unknown) -> ()): (InternalConnection)
 	local connection: InternalConnection
-	connection = signalConnect(signal, function(...: any): ()
+	connection = signalConnect(signal, function(...: unknown): ()
 		-- Even though this is not the immediate-mode method, we still use unlinkConnectionNow, as the disconnection
 		-- happens during dispatch-time (it's effectively equivalent to DisconnectNow).
 		unlinkConnectionNow(connection :: InternalConnection, signal)
@@ -622,9 +612,9 @@ const function signalOnce(signal: InternalSignal, func: (...any) -> ()): (Intern
 	return connection
 end
 
-const function signalOnceNow(signal: InternalSignal, func: (...any) -> ()): (InternalConnection)
+const function signalOnceNow(signal: InternalSignal, func: (...unknown) -> ()): (InternalConnection)
 	local connection: InternalConnection
-	connection = signalConnectNow(signal, function(...: any): ()
+	connection = signalConnectNow(signal, function(...: unknown): ()
 		unlinkConnectionNow(connection :: InternalConnection, signal)
 		func(...)
 	end)
@@ -638,29 +628,29 @@ Signal.OnceNow = signalOnceNow
 --[[
 	Yields the running thread, then unlinks the given connection from the signal, and returns any arguments returned from <code>coroutine.yield</code>.
 ]]
-const function safeAwaitSignal(connection: InternalConnection, signal: InternalSignal): (...any)
+const function safeAwaitSignal(connection: InternalConnection, signal: InternalSignal): (...unknown)
 	const args = {coroutine.yield()}
 	unlinkConnectionNow(connection, signal) -- Attempt unlink after resuming to account for external resumption
 	return table.unpack(args)
 end
 
-const function resumeAwaiting(thread: thread, ...: any): ()
+const function resumeAwaiting(thread: thread, ...: unknown): ()
 	-- Check that the thread is resumable to avoid nuisance errors.
 	if isThreadResumable(thread) then
 		resumeThread(thread, ...)
 	end
 end
 
-function Signal.Wait(self: InternalSignal): (...any)
+function Signal.Wait(self: InternalSignal): (...unknown)
 	const thisThread = coroutine.running()
-	return safeAwaitSignal(signalOnce(self, function(...: any): ()
+	return safeAwaitSignal(signalOnce(self, function(...: unknown): ()
 		resumeAwaiting(thisThread, ...)
 	end), self)
 end
 
-function Signal.WaitNow(self: InternalSignal): (...any)
+function Signal.WaitNow(self: InternalSignal): (...unknown)
 	const thisThread = coroutine.running()
-	return safeAwaitSignal(signalOnceNow(self, function(...: any): ()
+	return safeAwaitSignal(signalOnceNow(self, function(...: unknown): ()
 		resumeAwaiting(thisThread, ...)
 	end), self)
 end
@@ -668,7 +658,7 @@ end
 --[[
 	Calls all currently connected functions and processes first-level mutations.
 ]]
-const function processDispatch(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: any): ()
+const function processDispatch(signal: InternalSignal, mutationList: {{Types.SignalMutation}}, ...: unknown): ()
 	const head = signal._head
 	if not head then return end
 
@@ -691,27 +681,27 @@ const function processDispatch(signal: InternalSignal, mutationList: {{Types.Sig
 	for _, mutation in firstMutations do
 		const func = mutation.f
 		if not func then
+			local _: typeof(assert(mutation.f == nil))
 			-- The function is only undefined for re-entrant firing.
 			-- As re-entrant firing creates a new mutation level, no more mutations will be on this level.
-			processDispatch(signal, mutationList, table.unpack(mutation.a :: any))
+			processDispatch(signal, mutationList, table.unpack(mutation))
 			return
 		end
 
+		local _: typeof(assert(mutation.f))
 		const conn = mutation.c
 		if conn then
-			func(conn, signal)
+			(func :: any)(conn, signal)
 		else
-			func(signal)
+			(func :: any)(signal)
 		end
 	end
 end
 
-function Signal.Fire(self: InternalSignal, ...: any): ()
+function Signal.Fire(self: InternalSignal, ...: unknown): ()
 	const mutations = self._mutations
 	if self._firing then
-		enqueueMutationLevel(mutations, {
-			a = {...}
-		})
+		enqueueMutationLevel(mutations, {f = nil, ...})
 	else
 		self._firing = true
 		processDispatch(self, mutations, ...)
@@ -722,7 +712,7 @@ function Signal.Fire(self: InternalSignal, ...: any): ()
 	end
 end
 
-function Signal.FireNow(self: InternalSignal, ...: any): ()
+function Signal.FireNow(self: InternalSignal, ...: unknown): ()
 	self._firing = true
 
 	const mutations = self._mutations
@@ -759,7 +749,7 @@ function NamedSignal.wrap<OtherSignal>(otherSignal: OtherSignal & RBXScriptSigna
 		_mutations = {},
 	}, Signal) :: any
 
-	signal._wrapConnection = otherSignal:Connect(function(...: any): ()
+	signal._wrapConnection = otherSignal:Connect(function(...: unknown): ()
 		signal:Fire(...)
 	end)
 

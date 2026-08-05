@@ -1,3 +1,12 @@
+--[[
+	-- Types --
+
+	Provides core type definitions.
+
+	This file is part of NamedSignal and is licensed under the MIT License:
+		https://github.com/averlyst/NamedSignal/blob/main/LICENSE
+]]
+
 --!strict
 
 -- Basic Types --
@@ -107,8 +116,13 @@ end
 
 -- Connection Types --
 type BaseConnection<Signal, Signature> = {
+	--- The <code>Signal</code> that this connection is from.
 	read Signal: Signal,
+
+	--- Describes whether the <code>Connection</code> is active.
 	read Connected: boolean,
+
+	--- The callback function of this <code>Connection</code>.
 	read Callback: Signature,
 
 	read Disconnect: typeof(
@@ -236,10 +250,16 @@ type BaseSignal<Signal, Connection, Signature> = {
 }
 
 export type Signal<Signature = DefaultSignature> = BaseSignal<Signal<Signature>, Connection<Signature>, Signature> & {
-	-- UDTF-generated Signatures
+	--- Calls all connected functions and resumes all waiting threads with the given arguments.
 	read Fire: SignalFireSignature<Signature>,
+
+	--- The immediate mode equivalent of <code>Signal:Fire()</code>.
 	read FireNow: SignalFireSignature<Signature>,
+
+	--- Yields the calling thread until the <code>Signal</code> fires, and returns any arguments provided by it.
 	read Wait: SignalWaitSignature<Signature>,
+
+	--- The immediate mode equivalent of <code>Signal:Wait()</code>.
 	read WaitNow: SignalWaitSignature<Signature>,
 }
 
@@ -248,7 +268,6 @@ export type GenericSignal<Params... = ...any> = BaseSignal<
 	GenericConnection<Params...>,
 	((Params...) -> ())
 > & {
-	-- Generic Signatures
 	read Fire: typeof(
 		--[[
 			Calls all connected functions and resumes all waiting threads with the given arguments.
@@ -278,9 +297,21 @@ export type GenericSignal<Params... = ...any> = BaseSignal<
 -- We could definitely optimize mutations down the line if necessary. Simplicity and readability was the main focus at
 -- the time of writing this.
 export type SignalMutation = {
-	f: ((InternalSignal | InternalConnection | thread, InternalSignal?) -> ())?, -- for any mutation that isn't fire
-	c: InternalConnection?, -- for connection operations
-	a: {any}?, -- array of stored arguments from deferred fire
+	-- Connect/Disconnect
+	f: ((InternalConnection, InternalSignal) -> ()),
+	c: InternalConnection
+} | {
+	-- Connection Destroy
+	f: (InternalConnection) -> (),
+	c: InternalConnection
+} | {
+	-- Signal DisconnectAll/Destroy
+	f: (InternalSignal) -> (),
+	c: nil
+} | {
+	-- Re-entrant fire
+	f: nil,
+	[number]: unknown
 }
 
 -- We don't need to use internal UDTF here as there is no read-only public API that we write to.
