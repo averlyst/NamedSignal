@@ -1,12 +1,12 @@
-<!-- markdownlint-disable-file MD033 MD041 -->
+<!-- markdownlint-disable-file MD041 -->
 
 <div align="center"><img src="./docs/public/logo.png" alt="NamedSignal Logo" style="width:50%; height:auto;">
 
-<h2 style="margin-bottom: 1em; padding-bottom: 0.83em;"> A Luau signal implementation with a nice balance of ergonomics, performance, and features.</h2> <!-- markdownlint-disable-line MD026 -->
+<h2 style="margin-bottom: 1em; padding-bottom: 0.83em;"> A signal implementation with a nice balance of ergonomics, performance, and features.</h2> <!-- markdownlint-disable-line MD026 -->
 
-[![Download Badge](https://img.shields.io/badge/Download-005CC0?style=for-the-badge&logo=github&logoColor=white)][Download Link]
+[![Download Badge](https://img.shields.io/badge/Download-1277EF?style=for-the-badge&logo=github&logoColor=white)][Download Link]
 &ensp;
-[![Documentation Badge](https://img.shields.io/badge/Documentation-5C00C0?style=for-the-badge&logo=readme&logoColor=white)][Documentation Link]
+[![Documentation Badge](https://img.shields.io/badge/Documentation-AC32FF?style=for-the-badge&logo=readme&logoColor=white)][Documentation Link]
 <br><br>
 [![Release Badge](https://img.shields.io/github/v/release/Averlyst/NamedSignal)][Latest Release Link]
 &nbsp;
