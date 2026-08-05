@@ -2,29 +2,35 @@
 
 This page documents the performance optimizations employed by NamedSignal.
 
+## What We Optimize For
+
+Unlike many libraries that boast to be "the fastest signal library", we don't make ergonomical sacrifices or use-case assumptions. That is, we attempt to balance for every possible scenario, ranging from single-digit to thousands of connections, non-yielding and yielding listeners, and more.
+
+**We avoid micro-optimizations that hurt ergonomics**. No array-based API and indexing a number to check connection status, no FireSync/Async/Unsafe, and no caveats.
+
 ## Optimizations
+
+### Minimized Resumption for Non-Yielding Connections
+
+Most signal libraries cache one or more threads, however there is still a very large overhead for resumption.
+
+We improve upon this by using a more efficient dispatching technique that **only resumes more threads when a callback yields**, leading to vastly better non-yielding invocation performance with multiple connections.
+
+### Multi Thread Recycling
+
+**Every thread created for invocation is reused** whenever possible, cutting down the significant overhead for churning threads.
+
+### Dual Layer Thread Cache
+
+We implement **2 layers of thread caching**, a 'fast' L1 cache (a `local` variable), and a slower L2 cache (an array).
+
+Accessing an upvalue is faster than indexing or inserting into an array, thus slighting improving performance for light, repetitive, and non-yielding invocations.
 
 ### Linked Lists for O(1) Disconnect
 
 **Connections use [doubly linked lists](https://en.wikipedia.org/wiki/Doubly_linked_list)** to maintain order while allowing constant-time disconnections.
 
 While they are slower to iterate than an array, they avoid the extremely expensive shifting required by arrays when disconnecting.
-
-### Multi Thread Recycling
-
-**Every thread created for invocation is reused** whenever possible, this cuts down on the overhead for spawning new threads.
-
-### Dual Layer Thread Cache
-
-Inspired by CPU cache architecture, NamedSignal implements **2 layers of thread caching**, a "fast" L1 cache (a `local` variable), and a "slow" thread pool (an array).
-
-Accessing an upvalue is faster than indexing an array, so performance is slightly improved for non-yielding invocation.
-
-### Minimized Thread Resumption for Non-Yielding Connections
-
-Most signal libraries cache one or more threads, however there is still a very large overhead for resumption.
-
-NamedSignal improves upon this by using a more efficient dispatching technique that only resumes more threads when a callback yields, leading to vastly better non-yielding fire performance.
 
 ### Avoiding The OOP API Internally
 
