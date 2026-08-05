@@ -1,13 +1,15 @@
-<!-- markdownlint-disable-file MD033 -->
-
 # Installation
 
-## From GitHub
+NamedSignal is available as prebuilt binaries (.rbxm) and on wally!
 
-Download the `Signal.rbxm` model from the [Latest Release](https://github.com/averlyst/NamedSignal/releases/latest), and place it in your desired location.
+:::: tabs
+
+== GitHub
+
+[Download](https://github.com/averlyst/NamedSignal/releases/latest/download/Signal.rbxm) the `Signal.rbxm` model from the [Latest Release](https://github.com/averlyst/NamedSignal/releases/latest), and place it in your desired location.
 You can then require the module and use the API.
 
-## With Wally
+== Wally
 
 Add the following to your `wally.toml` dependencies:
 
@@ -43,9 +45,7 @@ wally-package-types --sourcemap sourcemap.json Packages/
 
 See the README.md file in [JohnnyMorganz's repository](https://github.com/JohnnyMorganz/wally-package-types) for more information.
 
-::::
-
-## From Source (Building with Rojo) {#from-source}
+== Rojo (From Source)
 
 If you prefer, you can build NamedSignal directly from source using Rojo.
 
@@ -56,3 +56,5 @@ rojo build --output "Signal.rbxm"
 ```
 
 Then insert the built `Signal.rbxm` into your desired location.
+
+::::
