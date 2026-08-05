@@ -1,5 +1,3 @@
-<!-- markdownlint-disable-file MD033 -->
-
 # API Overview
 
 Overview of the NamedSignal API — the module Interface, `Signal` and `Connection` Classes, Types, and Configuration values.
@@ -42,15 +40,11 @@ For simplicity, the exact types used such as generics or [User-Defined Type Func
 | `:Fire()` | `read (self: Signal, ...any) -> ()` | Calls all connected functions and resumes all waiting threads with the given arguments. |
 | `:FireNow()` | `read (self: Signal, ...any) -> ()` | The immediate mode equivalent of `Signal:Fire()`. |
 
-::: tip
+::: info {no-title}
 
 #### `:Wait()`/`:WaitNow()` can be resumed externally
 
 Unlike common implementations of `Signal:Wait()`, NamedSignal's can be safely resumed externally, without causing unexpected issues!
-
-:::
-
-::: info
 
 #### Immediate-mode Interruptors
 
@@ -62,9 +56,9 @@ Unlike common implementations of `Signal:Wait()`, NamedSignal's can be safely re
 
 | Member | Type | Description |
 | - | - | - |
-| `.Signal` | <code>read <a href="#signal">Signal</a></code> | A reference to the [`Signal`](#signal) that this `Connection` is for. |
+| `.Signal` | <code>read <a href="#signal">Signal</a></code> | The [`Signal`](#signal) that this `Connection` is from. |
 | `.Connected` | `read boolean` | Describes whether the `Connection` is active. |
-| `.Callback` | `read (...any) -> ()` | The connected function. |
+| `.Callback` | `read (...any) -> ()` | The callback function of this `Connection`. |
 | `:Disconnect()` | `read (self: Connection) -> ()` | Disconnects the `Connection` from the `Signal`. |
 | `:DisconnectNow()` | `read (self: Connection) -> ()` | The immediate mode equivalent of `Connection:Disconnect()`. |
 | `:Reconnect()` | `read (self: Connection) -> ()` | Reconnects the `Connection` to the `Signal`. |
@@ -72,7 +66,7 @@ Unlike common implementations of `Signal:Wait()`, NamedSignal's can be safely re
 | `:Destroy()` | `read (self: Connection) -> ()` | Destroys the `Connection`. |
 | `:DestroyNow()` | `read (self: Connection) -> ()` | The immediate mode equivalent of `Connection:Destroy()`. |
 
-::: tip
+::: info {no-title}
 
 #### `:Once()` is still once when `:Reconnect()`ing
 
@@ -193,7 +187,7 @@ These constants are located near the top of the script and may be configured by 
 > Flags are unstable and subject to change or removal.
 > They are set to the recommended values by default, only change these if you know what you're doing.
 
-### `ERROR_INFO_MODE` {#config-error-info-mode}
+### `ERROR_INFO_MODE` <Badge type="danger" text="caution" /> {#config-error-info-mode}
 
 Controls the quality of error information provided in the output in exchange for performance.
 
