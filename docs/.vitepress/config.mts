@@ -1,9 +1,19 @@
 import { defineConfig } from 'vitepress'
+import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+	markdown: {
+		config: (md) => {
+			md.use(tabsMarkdownPlugin)
+		}
+	},
+
 	title: "NamedSignal",
 	description: "Documentation for NamedSignal — A signal implementation for Luau with a nice balance of ergonomics, performance, and features.",
+	head: [
+		['link', { rel: 'icon', href: '/NamedSignal/favicon.ico' }]
+	],
 
 	base: "/NamedSignal/",
 	cleanUrls: true,
@@ -11,6 +21,8 @@ export default defineConfig({
 
 	themeConfig: {
 		// https://vitepress.dev/reference/default-theme-config
+		logo: '/square-logo.png',
+
 		nav: [
 			{ text: 'Home', link: '/' },
 			{ text: 'API', link: '/api-reference/api-overview' },
@@ -55,5 +67,10 @@ export default defineConfig({
 		},
 
 		outline: [2, 3],
+
+		footer: {
+			message: 'Released under the <a href="https://github.com/averlyst/NamedSignal/blob/main/LICENSE">MIT License</a>.',
+			copyright: 'Copyright © 2026 <a href="https://github.com/averlyst">Averlyst</a>',
+		},
 	},
 })
