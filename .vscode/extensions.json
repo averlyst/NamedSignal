@@ -5,13 +5,14 @@
 	// List of extensions which should be recommended for users of this workspace.
 	"recommendations": [
 		"tamasfe.even-better-toml",
+		"redhat.vscode-yaml",
 		"github.vscode-github-actions",
 		"github.vscode-pull-request-github",
 		"johnnymorganz.luau-lsp",
-		"davidanson.vscode-markdownlint",
 		"johnnymorganz.stylua",
-		"redhat.vscode-yaml",
-		"rlnt.keep-a-changelog"
+		"davidanson.vscode-markdownlint",
+		"rlnt.keep-a-changelog",
+		"vivaxy.vscode-conventional-commits"
 		
 	],
 	// List of extensions recommended by VS Code that should not be recommended for users of this workspace.
