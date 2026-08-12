@@ -41,7 +41,7 @@ If you for some reason require the fire to yield, you can use the following:
 
 ## Type complexity limits <Badge type="tip" text="Power Users" />
 
-At the time of writing, Luau has **arbitrary limitations** in place that are intended to prevent typechecking from freezing. In certain complex codebases, this may be hit and prevent proper typing, even if it's still reasonably responsive.
+At the time of writing, Luau has **arbitrary limitations** in place that are intended to prevent type solving from freezing. In certain complex codebases, this may be hit and prevent proper typing, even if it's still reasonably responsive.
 
 To fix this, **override the following Luau FFlags**, increasing them until you no longer hit a limit:
 

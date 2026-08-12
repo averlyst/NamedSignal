@@ -1,6 +1,6 @@
 # Future Considerations
 
-NamedSignal isn't as fully rich as we would like it to be, due to typechecking limitations and other constraints of Luau.
+NamedSignal isn't as fully rich as we would like it to be, due to type system limitations and other constraints of Luau.
 
 As Luau continues to evolve, things that were previously infeasible can become trivially simple, possibly lifting limitations that we currently face in the future.
 
