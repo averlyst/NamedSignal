@@ -21,7 +21,7 @@ You can do this in several ways:
 ::: code-group
 
 ```luau [Type Annotation [:]]
-local helloEvent: Signal.Signal<(subject: string) -> ()> = Signal.new()
+local helloEvent: Signal.Signal<(subject: string) -> ()> = Signal.new() :: any
 ```
 
 ```luau [Type Casting [::]]
