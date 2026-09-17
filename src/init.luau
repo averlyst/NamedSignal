@@ -392,6 +392,8 @@ function Connection.DestroyNow(self: InternalConnection): ()
 	end
 end
 
+table.freeze(Connection)
+
 -- Signal Class --
 const Signal = {}
 Signal.__index = Signal
@@ -725,6 +727,8 @@ function Signal.FireNow(self: InternalSignal, ...: unknown): ()
 	end
 end
 
+table.freeze(Signal)
+
 -- Interface --
 const NamedSignal = {}
 
@@ -756,4 +760,4 @@ function NamedSignal.wrap<OtherSignal>(otherSignal: OtherSignal & RBXScriptSigna
 	return signal :: any
 end
 
-return NamedSignal
+return table.freeze(NamedSignal)
