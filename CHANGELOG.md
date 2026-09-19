@@ -1,4 +1,4 @@
-<!-- markdownlint-disable-file MD024 MD033 MD034 -->
+<!-- markdownlint-disable-file MD024 MD034 -->
 
 # Changelog
 
@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [2.3.3] - 2026-XX-XX
+
+### Changed
+
+- Freeze API tables to allow metamethod lookup caching on Roblox/Luau version 739 and later, improving performance.
+
+### Added
+
+- Added documentation for additional members and types, visible to Luau-LSP users.
+- Freshened up and updated the web documentation.
+  - The home page now has a quick overview of the library.
+  - Comparisons on the Introduction page have been updated, and a lot of rewording for readability.
+  - Other minor changes.
 
 ## [2.3.2] - 2026-07-22
 
@@ -253,6 +267,7 @@ Bumped version to major 1 in accordance with Semantic Versioning 2.0,0, indicati
 
 Initial release of NamedSignal
 
+[2.3.3]: https://github.com/averlyst/NamedSignal/compare/v2.3.2...v2.3.3
 [2.3.2]: https://github.com/averlyst/NamedSignal/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/averlyst/NamedSignal/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/averlyst/NamedSignal/compare/v2.2.2...v2.3.0
