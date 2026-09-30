@@ -39,13 +39,12 @@ const ERROR_INFO_MODE: "Auto" | "Full" | "Warn" | "None"
 	= "Full"
 
 -- Imports --
+-- NOTE: Not every package manager accounts for imported types/aliases when re-exporting.
+-- This only occurs here on `Types.DefaultSignature`, replace usage of it in type exports with `(...any) -> ()`.
 const Types = require("@self/Types")
 
 -- Deferred Mutation Helpers --
 
---[[
-	Returns the next node pointer of the preserved tail connection while clearing its reference.
-]]
 const function popPreservedTailNext(signal: InternalSignal): (InternalConnection?)
 	const pTail = signal._pTail
 	if not pTail then return nil end
@@ -102,9 +101,6 @@ const function spawnThreadWithSelf<T..., U...>(func: (T...) -> (U...)): (thread)
 	return thread
 end
 
---[[
-	Returns a boolean indicating if the given thread is resumable.
-]]
 const function isThreadResumable(co: thread): (boolean)
 	return coroutine.status(co) == "suspended"
 end
@@ -213,7 +209,7 @@ const Connection = {}
 Connection.__index = Connection
 
 --- The UDTF-managed <code>Connection</code> type. Use <code>GenericConnection</code> for self-recursive <code>Connection</code> types.
-export type Connection<Signature = Types.DefaultSignature> = Types.Connection<Signature>
+export type Connection<Signature = (...any) -> ()> = Types.Connection<Signature>
 
 --- The pure generics <code>Connection</code> type.
 export type GenericConnection<Params...> = Types.GenericConnection<Params...>
@@ -399,7 +395,7 @@ const Signal = {}
 Signal.__index = Signal
 
 --- The UDTF-managed <code>Signal</code> type. Use <code>GenericSignal</code> for self-recursive <code>Signal</code> types.
-export type Signal<Signature = Types.DefaultSignature> = Types.Signal<Signature>
+export type Signal<Signature = (...any) -> ()> = Types.Signal<Signature>
 
 --- The pure generics <code>Signal</code> type.
 export type GenericSignal<Params...> = Types.GenericSignal<Params...>
