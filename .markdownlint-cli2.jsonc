@@ -1,5 +1,12 @@
 {
 	"ignores": [
 		"LICENSE"
-	]
+	],
+	
+	"config": {
+		"default": true,
+		
+		"MD010": false, // no hard tabs
+		"MD033": false // no inline html
+	}
 }

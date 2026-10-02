@@ -1,17 +1,19 @@
-<!-- markdownlint-disable-file MD033 MD041 -->
+<!-- markdownlint-disable-file MD041 -->
 
 <div align="center"><img src="./docs/public/logo.png" alt="NamedSignal Logo" style="width:50%; height:auto;">
 
-<h2 style="margin-bottom: 1em; padding-bottom: 0.83em;"> A Luau signal implementation with a nice balance of ergonomics, performance, and features.</h2> <!-- markdownlint-disable-line MD026 -->
+<h2 style="margin-bottom: 1em; padding-bottom: 0.83em;"> A signal implementation with a nice balance of ergonomics, performance, and features.</h2> <!-- markdownlint-disable-line MD026 -->
 
-[![Download Badge](https://img.shields.io/badge/Download-005CC0?style=for-the-badge&logo=github&logoColor=white)][Download Link]
+[![Download Badge](https://img.shields.io/badge/Download-1277EF?style=for-the-badge&logo=github&logoColor=white)][Download Link]
 &ensp;
-[![Documentation Badge](https://img.shields.io/badge/Documentation-5C00C0?style=for-the-badge&logo=readme&logoColor=white)][Documentation Link]
+[![Documentation Badge](https://img.shields.io/badge/Documentation-AC32FF?style=for-the-badge&logo=readme&logoColor=white)][Documentation Link]
 <br><br>
 [![Release Badge](https://img.shields.io/github/v/release/Averlyst/NamedSignal)][Latest Release Link]
 &nbsp;
-[![Wally Badge](https://img.shields.io/badge/wally-package-FF7030?style=flat&label=wally)][Wally Link]
-&emsp;
+[![Pesde Badge](https://img.shields.io/badge/pesde-package-FF7030?style=flat)][Pesde Link]
+&nbsp;
+[![Wally Badge](https://img.shields.io/badge/wally-package-FF7030?style=flat)][Wally Link]
+<br>
 [![DevForum Badge](https://img.shields.io/badge/DevForum-lightblue?style=social&logo=robloxstudio)][DevForum Link]
 &nbsp;
 [![GitHub Badge](https://img.shields.io/badge/GitHub-gray?style=social&logo=github)][GitHub Link]
@@ -20,7 +22,7 @@
 
 ### Named Parameters
 
-Auto-fill your parameter names — `a01: type` begone!
+Auto-fill your parameter names (<em><code>a01: type</code></em> begone!)
 
 ### Strict Typing
 
@@ -32,7 +34,7 @@ Get predictable behavior and prevent edge case bugs.
 
 ### High Performance
 
-More efficient than engine APIs by working in pure Luau.
+DX balanced with performance; faster than engine APIs.
 
 ---
 
@@ -43,6 +45,7 @@ Learn more at [Documentation | NamedSignal][Documentation Link].
 [Download Link]: https://github.com/averlyst/NamedSignal/releases/latest/download/Signal.rbxm
 [Documentation Link]: https://personal.averlyst.dev/NamedSignal
 [Latest Release Link]: https://github.com/averlyst/NamedSignal/releases/latest/
+[Pesde Link]: https://pesde.dev/packages/averlyst/namedsignal
 [Wally Link]: https://wally.run/package/nowoshire/namedsignal
 [DevForum Link]: https://devforum.roblox.com/t/4341837
 [GitHub Link]: https://github.com/averlyst/NamedSignal

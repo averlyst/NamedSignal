@@ -7,41 +7,43 @@ This guide shows the basics of using NamedSignal — creating, connecting, and f
 Requiring the module returns a table with a `new` constructor:
 
 ```luau
-const Signal = require(path.to.module)
+local Signal = require(path.to.module)
 
-const helloEvent = Signal.new()
+local helloEvent = Signal.new()
 ```
 
 ## Type Annotation
 
-To utilize NamedSignal's main quality-of-life feature — **named parameters with full type safety** — you should annotate the type of the Signal.
+To utilize NamedSignal's main quality-of-life feature, **named parameters**, you should annotate the type of the Signal.
 
 You can do this in several ways:
 
 ::: code-group
 
 ```luau [Type Annotation [:]]
-const helloEvent: Signal.Signal<(subject: string) -> ()> = Signal.new()
+local helloEvent: Signal.Signal<(subject: string) -> ()> = Signal.new() :: any
 ```
 
 ```luau [Type Casting [::]]
-const helloEvent = Signal.new() :: Signal.Signal<(subject: string) -> ()>
+local helloEvent = Signal.new() :: Signal.Signal<(subject: string) -> ()>
 ```
 
-```luau ['Turbofish' [<<>>()]]
-const helloEvent = Signal.new<<(subject: string) -> ()>>()
+```luau [Turbofish<a href="#type-annotation-turbofish-fnd1" id="type-annotation-turbofish-fno1">*</a> [<<>>]]
+local helloEvent = Signal.new<<(subject: string) -> ()>>()
 ```
 
 :::
 
 All three approaches achieve the same result, use whichever fits your requirements.
 
+<sup><a href="#type-annotation-turbofish-fno1" id="type-annotation-turbofish-fnd1">[*]</a></sup> Colloquial name for [explicit type parameter instantiation](https://rfcs.luau.org/explicit-type-parameter-instantiation.html), borrowed from Rust (`::<T>`).
+
 ## Connect a Listener
 
 Once typed, Luau can automatically fill in the connecting function for you:
 
 ```luau
-const helloConnection = helloEvent:Connect(function(subject: string)
+local helloConnection = helloEvent:Connect(function(subject: string)
 	print(`Hello, {subject}!`)
 end)
 ```
@@ -63,11 +65,11 @@ helloEvent:Fire("world")
 All together:
 
 ```luau
-const Signal = require(path.to.module)
+local Signal = require(path.to.module)
 
-const helloEvent = Signal.new<<(subject: string) -> ()>>()
+local helloEvent = Signal.new<<(subject: string) -> ()>>()
 
-const helloConnection = helloEvent:Connect(function(subject: string)
+local helloConnection = helloEvent:Connect(function(subject: string)
 	print(`Hello, {subject}!`)
 end)
 
@@ -82,10 +84,10 @@ Hello, world!
 
 ## Going Cross-Script
 
-The most common way of sharing Signals across scripts is to place it inside a table, whether at the module-level, as a member in a class, or elsewhere:
+The most common way of sharing signals across scripts is to place it inside a table, whether at the module-level, as a member in a class, or elsewhere:
 
 ```luau
-const Module = {}
+local Module = {}
 
 Module.fooEvent = Signal.new<<(cat: "meow") -> ()>>() -- [!code highlight]
 
@@ -95,7 +97,7 @@ return Module
 Other scripts can then access the created event by requiring the module that contains it:
 
 ```luau
-const Module = require("path.to.module")
+local Module = require(path.to.module)
 
 Module.fooEvent:Connect(function(cat: "meow")
 	print(cat)

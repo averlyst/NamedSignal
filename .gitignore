@@ -1,6 +1,6 @@
-# Local builds
-*.rbxlx
+# Project build files
 *.rbxl
+*.rbxlx
 *.rbxm
 *.rbxmx
 
@@ -21,9 +21,18 @@ sourcemap.json
 
 /node_modules
 
-# Local wally files
-/Packages
-/wally.lock
+# Wally
+Packages
+wally.lock
+wally.tgz
+
+# Pesde
+roblox_packages/
+luau_packages/
+lune_packages/
+.pesde/
+pesde.lock
+package.tar.gz
 
 # Affinity files
 *.af~lock~

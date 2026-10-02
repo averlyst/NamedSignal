@@ -1,8 +1,6 @@
-<!-- markdownlint-disable-file MD033 -->
-
 # Future Considerations
 
-NamedSignal isn't as fully rich as we would like it to be, due to typechecking limitations and other constraints of Luau.
+NamedSignal isn't as fully rich as we would like it to be, due to type system limitations and other constraints of Luau.
 
 As Luau continues to evolve, things that were previously infeasible can become trivially simple, possibly lifting limitations that we currently face in the future.
 
@@ -12,7 +10,7 @@ Changes to the language are proposed through a Request For Comment (RFC) process
 
 > <small>See the [Pull Request](https://github.com/luau-lang/rfcs/pull/206)</small>
 
-This proposal would be the most significant change in the Signal event-dispatcher scene, potentially allowing every Signal library to have named parameters if they were using generic type packs.
+This proposal would be the most significant change in the signal event-dispatcher scene, potentially allowing every signal library to have named parameters if they were using generic type packs.
 
 Currently, NamedSignal implements named parameters by using a function signature, which *does* allow naming parameters, but mutation of the signature **requires a User Defined Type Function (UDTF)**. Not only is this complicated, it's also quite **fragile in practice**, with examples being:
 

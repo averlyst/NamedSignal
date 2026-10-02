@@ -97,10 +97,10 @@ While deferred mutations are the safest default, almost every `Signal` and `Conn
 Use the `Signal:DestroyNow()` or `Signal:DisconnectAllNow()` method to halt a chain instantly. This is vital when a listener detects a state that makes subsequent logic dangerous or invalid.
 
 ```luau
-const object = Instance.new("BoolValue")
-const valueChanged = Signal.new<<(value: boolean) -> ()>>()
+local object = Instance.new("BoolValue")
+local valueChanged = Signal.new<<(value: boolean) -> ()>>()
 
--- [!code focus:8]
+-- [!code focus:15]
 valueChanged:Connect(function(value: boolean)
 	if value then
 		object:Destroy()
@@ -112,6 +112,7 @@ end)
 
 valueChanged:Connect(function(value: boolean)
 	-- This listener will error if the object is destroyed!
+	-- [!code error]
 	object.Parent = workspace
 end)
 
@@ -130,7 +131,7 @@ object.Value = true
 > This assumes you aren't using other deferred methods that can schedule after `:WaitNow()`.
 
 ```luau
-const processObject = Signal.new<<(object: Instance) -> ()>>()
+local processObject = Signal.new<<(object: Instance) -> ()>>()
 
 -- [!code focus:6]
 processObject:Connect(function(object: Instance)
