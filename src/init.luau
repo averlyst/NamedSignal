@@ -200,8 +200,7 @@ const resumeThread = task and (
 				)
 			end
 		end)()
-		else
-		coroutine.resume
+	else coroutine.resume
 )
 
 -- Connection Class --
