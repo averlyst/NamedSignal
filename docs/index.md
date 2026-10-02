@@ -16,27 +16,27 @@ hero:
       link: /api-reference/api-overview
 
 features:
-  - title: "Rich Autofill"
-    details: "Auto-fill your parameter names — <code>a01: type</code> begone!"
-    link: /getting-started/quick-start#connect-a-listener
-  - title: "Strict Typing"
+  - title: "Richer Autofill"
+    details: "Auto-fill your parameter names (<em><code>a01: type</code></em> begone!)"
+    link: "#richer-autofill" #/getting-started/quick-start#connect-a-listener
+  - title: "Strict Typechecking"
     details: "Fully strictly typed for the New Luau Type Solver."
-    link: https://devforum.roblox.com/t/general-release-luau’s-new-type-solver/4084991
+    link: "#strict-typechecking" #https://devforum.roblox.com/t/general-release-luau’s-new-type-solver/4084991
   - title: "Deferred Mutations"
     details: "Get predictable behavior and prevent edge case bugs."
-    link: /api-reference/deferred-mutations
+    link: "#deferred-mutations" #/api-reference/deferred-mutations
   - title: "High Performance"
-    details: "More efficient than engine APIs by working in pure Luau."
-    link: /additional-info/performance
+    details: "DX balanced with performance; faster than engine APIs."
+    link: "#performance" #/additional-info/performance
 ---
 
 <!-- markdownlint-disable-file MD041 -->
 
-## 1. Richer Autofill
+## <Badge type="tip" text="1"/> Richer Autofill
 
-NamedSignal introduces named parameters, providing more semantic information than just the type.
+Named parameters, the key feature of NamedSignal, provides more semantic information than just the type alone.
 
-Simply use Luau's function type syntax to define names!
+Simply use the function type syntax to define names!
 
 ```luau
 local catEvent = Signal.new<<
@@ -51,7 +51,7 @@ end)
 catEvent:Fire("Herbert") --> "Hi Herbert!"
 ```
 
-## 2. Strict Typechecking
+## <Badge type="tip" text="2"/> Strict Typechecking
 
 Catch bugs before they happen with Luau's strict typechecking.
 
@@ -66,7 +66,7 @@ stringAdded:Fire(100)
                  ^^^
 ```
 
-## 3. Deferred Mutations
+## <Badge type="tip" text="3"/> Deferred Mutations
 
 Defer mutations for more predictable and consistent behavior, eliminating edge-cases.
 
@@ -96,17 +96,17 @@ Have code that relies on immediate changes? There's an [escape hatch](/api-refer
 
 Read more about deferred mutations on the [dedicated page](/api-reference/deferred-mutations).
 
-## 4. Performance
+## <Badge type="tip" text="4"/> Performance
 
-NamedSignal is optimised to perform well in every use case, from light signals to extremes with thousands of connections.
+While NamedSignal was primarily designed with DX in mind, it's also optimized to perform well in the majority of use cases: from light signals to extremes with thousands of connections.
 
-With multiple connections, performance is greatly improved using a minimized resumption dispatcher (also known as 'spinning threadloop'), resulting in **600%+ speedup** with 10 connections.
+A minimized resumption dispatcher (also sometimes known as 'spinning threadloop'), results in a **600%+ speedup** on signals with 10 connections, which along with other optimizations place NamedSignal on par with or ahead of other libraries.
 
 Read more about optimizations and details on the [dedicated page](/additional-info/performance).
 
 ## Interested?
 
-Check out the [Introduction](/getting-started/introduction) and comparisons to other libraries, or get straight into [Installation](/getting-started/installation).
+Check out the [introduction](/getting-started/introduction) to compare with other libraries, or get straight into [installation](/getting-started/installation).
 
 ---
 
@@ -122,7 +122,10 @@ Check out the [Introduction](/getting-started/introduction) and comparisons to o
 		/>
 	</a>
 	<div>
-		<p style="margin-bottom: 0.1rem; margin-top: 0; font-size: 1.5em;"><b>SCDS</b></p>
-		<p style="margin-bottom: 0; margin-top: 0.1rem; color: grey">No AI usage.</p>
+		<p style="margin-bottom: 0.6rem; margin-top: 0; font-size: 1.5rem;"><b>SCDS</b></p>
+		<p style="margin-bottom: 0; margin-top: 0; color: grey"><Badge type="info" text="No AI Usage"/></p>
 	</div>
+</div>
+<div align="center">
+	<p style="color: grey">All code and documentation was written entirely by hand.</p>
 </div>
