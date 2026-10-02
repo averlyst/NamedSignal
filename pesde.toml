@@ -1,0 +1,33 @@
+name = "averlyst/namedsignal"
+version = "2.3.3"
+description = "A signal implementation with a nice balance of ergonomics, performance, and features."
+authors = ["averlyst"]
+license = "MIT"
+repository = "https://github.com/averlyst/NamedSignal"
+
+includes = [
+  "pesde.toml",
+  "README.md",
+  "LICENSE",
+  "src/**",
+]
+
+[target]
+environment = "roblox"
+lib = "src/init.luau"
+build_files = ["src"]
+
+[indices]
+default = "https://github.com/pesde-pkg/index"
+
+[scripts]
+roblox_sync_config_generator = ".pesde/scripts/roblox_sync_config_generator.luau"
+sourcemap_generator = ".pesde/scripts/sourcemap_generator.luau"
+
+[dev_dependencies]
+scripts = { name = "pesde/scripts_rojo", version = "^0.2.0", target = "lune" }
+rojo = { name = "pesde/rojo", version = "^7.5.1", target = "lune" }
+
+[engines]
+pesde = "^0.7.0"
+lune = "^0.10.2"
