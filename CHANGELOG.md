@@ -11,17 +11,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.3.3] - 2026-XX-XX
 
+Back again with some more maintenance, and proper pesde support!
+
+To install, run the following:
+
+```bash
+pesde add averlyst/namedsignal
+pesde install
+```
+
+### Fixed
+
+- fix: Remove dependence on Types module in exported types (`DefaultSignature`) for package managers that don't correctly re-export aliases/modules.
+
 ### Changed
 
-- Freeze API tables to allow metamethod lookup caching on Roblox/Luau version 739 and later, improving performance.
+- perf: Froze metatables to allow metamethod lookup caching on Roblox/Luau version 739 and later (LuauFrozenMetaButterfly), improving performance by ~4-10%.
 
 ### Added
 
-- Added documentation for additional members and types, visible to Luau-LSP users.
-- Freshened up and updated the web documentation.
+- docs: Added IDE documentation for additional members and types, visible to Luau-LSP users.
+- docs: Freshened up and updated the web documentation.
   - The home page now has a quick overview of the library.
-  - Comparisons on the Introduction page have been updated, and a lot of rewording for readability.
-  - Other minor changes.
+  - Comparisons on the Introduction page have been updated and improved readability.
+  - And a lot more minor changes.
 
 ## [2.3.2] - 2026-07-22
 
