@@ -1,12 +1,12 @@
 [package]
 name = "nowoshire/namedsignal"
 description = "A signal implementation with a nice balance of ergonomics, performance, and features."
-version = "2.3.3"
+version = "2.3.4"
 license = "MIT"
 authors = ["averlyst"]
 
 registry = "https://github.com/UpliftGames/wally-index"
-homepage = "https://personal.averlyst.dev/NamedSignal/"
+homepage = "https://docs.averlyst.dev/NamedSignal/"
 repository = "https://github.com/averlyst/NamedSignal"
 
 realm = "shared"
