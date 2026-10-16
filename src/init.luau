@@ -1,13 +1,13 @@
 --[[
 	-- NamedSignal --
 	
-	v2.3.3
+	v2.3.4
 
 	A signal implementation for Luau, with a nice balance of ergonomics, performance, and features.
 	Most notably, you can use function types to get named parameters!
 
 	Comprehensive documentation and additional info is available at:
-		https://personal.averlyst.dev/NamedSignal
+		https://docs.averlyst.dev/NamedSignal
 
 	This software is licensed under the MIT License:
 		https://github.com/averlyst/NamedSignal/blob/main/LICENSE

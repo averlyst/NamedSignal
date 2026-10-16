@@ -1,5 +1,5 @@
 name = "averlyst/namedsignal"
-version = "2.3.3"
+version = "2.3.4"
 description = "A signal implementation with a nice balance of ergonomics, performance, and features."
 authors = ["averlyst"]
 license = "MIT"

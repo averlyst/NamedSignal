@@ -43,7 +43,7 @@ Learn more at [Documentation | NamedSignal][Documentation Link].
 </div>
 
 [Download Link]: https://github.com/averlyst/NamedSignal/releases/latest/download/Signal.rbxm
-[Documentation Link]: https://personal.averlyst.dev/NamedSignal
+[Documentation Link]: https://docs.averlyst.dev/NamedSignal
 [Latest Release Link]: https://github.com/averlyst/NamedSignal/releases/latest/
 [Pesde Link]: https://pesde.dev/packages/averlyst/namedsignal
 [Wally Link]: https://wally.run/package/nowoshire/namedsignal
