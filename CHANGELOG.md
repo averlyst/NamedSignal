@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.4] - 2026-10-16
+
+### Changed
+
+Updated documentation links to use docs subdomain.
+
 ## [2.3.3] - 2026-10-02
 
 Back again with some more maintenance, and proper pesde support!
@@ -280,6 +286,7 @@ Bumped version to major 1 in accordance with Semantic Versioning 2.0,0, indicati
 
 Initial release of NamedSignal
 
+[2.3.4]: https://github.com/averlyst/NamedSignal/compare/v2.3.3...v2.3.4
 [2.3.3]: https://github.com/averlyst/NamedSignal/compare/v2.3.2...v2.3.3
 [2.3.2]: https://github.com/averlyst/NamedSignal/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/averlyst/NamedSignal/compare/v2.3.0...v2.3.1
